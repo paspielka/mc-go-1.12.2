@@ -63,7 +63,7 @@ func PingAndList(addr string, port int) (string, error) {
 		return "", fmt.Errorf("recv list packect fail: %v", err)
 	}
 	s, _ := pk.UnpackString(bytes.NewReader(recv.Data))
-	return string(s), nil
+	return s, nil
 }
 
 // JoinServer connect a Minecraft server.
@@ -85,6 +85,7 @@ func (p *Auth) JoinServer(addr string, port int) (g *Game, err error) {
 	g.wd.Entities = make(map[int32]Entity)
 	g.wd.chunks = make(map[chunkLoc]*Chunk)
 	g.events = make(chan Event)
+	g.debugLogs = make(chan string)
 	g.motion = make(chan func())
 
 	// Handshake
