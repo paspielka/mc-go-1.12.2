@@ -26,11 +26,10 @@ type Game struct {
 	player    Player
 	wd        world //the map data
 
-	sendChan  chan pk.Packet  //be used when HandleGame
-	recvChan  chan *pk.Packet //be used when HandleGame
-	events    chan Event
-	motion    chan func() //used to submit a function and HandleGame do
-	debugLogs chan string
+	sendChan chan pk.Packet  //be used when HandleGame
+	recvChan chan *pk.Packet //be used when HandleGame
+	events   chan Event
+	motion   chan func() //used to submit a function and HandleGame do
 }
 
 // PingAndList chack server status and list online player
@@ -85,7 +84,6 @@ func (p *Auth) JoinServer(addr string, port int) (g *Game, err error) {
 	g.wd.Entities = make(map[int32]Entity)
 	g.wd.chunks = make(map[chunkLoc]*Chunk)
 	g.events = make(chan Event)
-	g.debugLogs = make(chan string)
 	g.motion = make(chan func())
 
 	// Handshake

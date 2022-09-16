@@ -53,6 +53,3 @@ type SoundEffectEvent struct {
 func (g *Game) GetEvents() <-chan Event {
 	return g.events
 }
-func (g *Game) GetDebugLogs() <-chan string {
-	return g.debugLogs
-}
