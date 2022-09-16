@@ -16,6 +16,42 @@ func (g *Game) SetPosition(x, y, z float64, onGround bool) {
 	}
 }
 
+// CalcCollisionBox calculate the collision box of the block
+func CalcCollisionBox(b Block) []Vector3 {
+	// TODO: calculate the collision box of the block
+	return []Vector3{}
+}
+
+// PlaceBlock place a block in the position and wait
+func (g *Game) PlaceBlock(x, y, z int, face Face) error {
+	b := g.GetBlock(x, y, z).id
+	sendPlayerBlockPlacementPacket(g, x, y, z, face, 0, 0, 0, 0)
+
+	for {
+		time.Sleep(time.Millisecond * 50)
+		if g.GetBlock(x, y, z).id != b {
+			break
+		}
+		g.SwingHand(true)
+	}
+
+	return nil
+}
+
+func sendPlayerBlockPlacementPacket(g *Game, x int, y int, z int, face Face, i int, i2 int, i3 int, i4 int) {
+	var data []byte
+	data = append(data, pk.PackPosition(x, y, z)...)
+	data = append(data, pk.PackVarInt(int32(face))...)
+	data = append(data, pk.PackVarInt(int32(i))...)
+	data = append(data, pk.PackVarInt(int32(i2))...)
+	data = append(data, pk.PackVarInt(int32(i3))...)
+	data = append(data, pk.PackVarInt(int32(i4))...)
+	g.sendChan <- pk.Packet{
+		ID:   0x1F,
+		Data: data,
+	}
+}
+
 // LookAt method turn player's hand and make it look at a point.
 func (g *Game) LookAt(x, y, z float64) {
 	x0, y0, z0 := g.player.X, g.player.Y, g.player.Z
