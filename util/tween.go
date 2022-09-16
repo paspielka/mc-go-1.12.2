@@ -1,14 +1,14 @@
-package util
+package gomcbot
 
 import (
 	"fmt"
-	bot "github.com/edouard127/mc-go-1.12.2"
+	. "github.com/edouard127/mc-go-1.12.2/struct"
 	"math"
 	"time"
 )
 
 // TweenLookAt is the Tween version of LookAt
-func TweenLookAt(g *bot.Game, x, y, z float64, t time.Duration) {
+func TweenLookAt(g *Game, x, y, z float64, t time.Duration) {
 	p := g.GetPlayer()
 	v3 := p.GetPosition()
 	x, y, z = x-v3.X, y-v3.Y, z-v3.Z
@@ -24,7 +24,7 @@ func TweenLookAt(g *bot.Game, x, y, z float64, t time.Duration) {
 }
 
 // TweenLook do tween animation at player's head.
-func TweenLook(g *bot.Game, yaw, pitch float32, t time.Duration) {
+func TweenLook(g *Game, yaw, pitch float32, t time.Duration) {
 	p := g.GetPlayer()
 	start := time.Now()
 	yaw0, pitch0 := p.Yaw, p.Pitch
@@ -38,7 +38,7 @@ func TweenLook(g *bot.Game, yaw, pitch float32, t time.Duration) {
 }
 
 // TweenLineMove allows you smoothly move on plane. You can't move in Y axis
-func TweenLineMove(g *bot.Game, x, z float64) error {
+func TweenLineMove(g *Game, x, z float64) error {
 	p := g.GetPlayer()
 	start := time.Now()
 	v3 := p.GetPosition()
@@ -53,7 +53,11 @@ func TweenLineMove(g *bot.Game, x, z float64) error {
 	var scale float64
 	for scale < 1 {
 		scale = float64(time.Since(start)) / float64(t)
-		g.SetPosition(v3.X+ofstX*scale, v3.Y, v3.Z+ofstZ*scale, true)
+		g.SetPosition(Vector3{
+			X: v3.X + ofstX*scale,
+			Y: v3.Y,
+			Z: v3.Z + ofstZ*scale,
+		}, g.Player.OnGround)
 		time.Sleep(time.Millisecond * 50)
 	}
 
@@ -69,28 +73,43 @@ func similar(a, b float64) bool {
 }
 
 // TweenJump simulate player jump make no headway
-func TweenJump(g *bot.Game) {
+func TweenJump(g *Game) {
 	p := g.GetPlayer()
 	y := math.Floor(p.Y)
 	for tick := 0; tick < 11; tick++ {
 		h := -1.7251e-8 + 0.4591*float64(tick) - 0.0417*float64(tick)*float64(tick)
 
-		g.SetPosition(p.X, y+h, p.Z, false)
+		g.SetPosition(Vector3{
+			X: p.X,
+			Y: y + h,
+			Z: p.Z,
+		}, false)
 		time.Sleep(time.Millisecond * 50)
 	}
-	g.SetPosition(p.X, p.Y, p.Z, true)
+	g.SetPosition(Vector3{
+		X: p.X,
+		Y: y,
+		Z: p.Z,
+	}, true)
 }
 
 // TweenJumpTo simulate player jump up a block
-func TweenJumpTo(g *bot.Game, x, z int) {
+func TweenJumpTo(g *Game, x, z int) {
 	p := g.GetPlayer()
 	y := math.Floor(p.Y)
 	for tick := 0; tick < 7; tick++ {
 		h := -1.7251e-8 + 0.4591*float64(tick) - 0.0417*float64(tick)*float64(tick)
 
-		g.SetPosition(p.X, y+h, p.Z, false)
+		g.SetPosition(Vector3{
+			X: p.X,
+			Y: y + h,
+			Z: p.Z,
+		}, false)
 		time.Sleep(time.Millisecond * 50)
 	}
-	TweenLineMove(g, float64(x)+0.5, float64(z)+0.5)
+	err := TweenLineMove(g, float64(x)+0.5, float64(z)+0.5)
+	if err != nil {
+		return
+	}
 	CalibratePos(g)
 }

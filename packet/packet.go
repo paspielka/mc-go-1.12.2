@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"compress/zlib"
 	"fmt"
+	. "github.com/edouard127/mc-go-1.12.2/struct"
 	"io"
 	"math"
 )
@@ -102,6 +103,14 @@ func PackPosition(x, y, z int) (p []byte) {
 		position >>= 8
 	}
 	return
+}
+
+func PackVector3(v3 Vector3) (p []byte) {
+	var data []byte
+	data = append(data, PackDouble(v3.X)...)
+	data = append(data, PackDouble(v3.Y)...)
+	data = append(data, PackDouble(v3.Z)...)
+	return data
 }
 
 //PackFloat 打包一个32位浮点数

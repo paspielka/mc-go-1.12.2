@@ -1,6 +1,6 @@
-package util
+package gomcbot
 
-// NonSolid tests if a square can be passed through
+// NonSolid test if a square can be passed through
 func NonSolid(bs string) bool {
 	return bs == "minecraft:air" || //空气
 		bs == "minecraft:cave_air" ||

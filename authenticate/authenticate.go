@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	mb "github.com/edouard127/mc-go-1.12.2"
+	. "github.com/edouard127/mc-go-1.12.2/struct"
 	"io/ioutil"
 	"net/http"
 )
@@ -105,8 +105,8 @@ type Response struct {
 }
 
 // ToAuth convert Response to github.com/Tnze/gomcbot.Auth
-func (r *Response) ToAuth() mb.Auth {
-	return mb.Auth{
+func (r *Response) ToAuth() Auth {
+	return Auth{
 		Name: r.SelectedProfile.Name,
 		UUID: r.SelectedProfile.ID,
 		AsTk: r.AccessToken,
