@@ -638,6 +638,7 @@ func handleEntityHeadLookPacket(g *Game, r *bytes.Reader) {
 			float64(yaw) * 360 / 256,
 			float64(pitch) * 360 / 256,
 		})
+		fmt.Printf("Entity %d HeadLook: %f, %f", ID, E.Rotation.X, E.Rotation.Y)
 	}
 }
 
@@ -784,6 +785,7 @@ func sendPlayerLookPacket(g *Game) {
 	data = append(data, pk.PackFloat(g.player.Yaw)...)
 	data = append(data, pk.PackFloat(g.player.Pitch)...)
 	data = append(data, pk.PackBoolean(g.player.OnGround))
+	fmt.Printf("Yaw:%f Pitch:%f OnGround:%t", g.player.Yaw, g.player.Pitch, g.player.OnGround)
 	g.sendChan <- pk.Packet{
 		ID:   0x0F,
 		Data: data,
