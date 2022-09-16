@@ -9,7 +9,10 @@ var itemIDs map[string]struct {
 var itemNameByID []string
 
 func init() {
-	json.Unmarshal([]byte(itemIDsJSON), &itemIDs)
+	err := json.Unmarshal([]byte(itemIDsJSON), &itemIDs)
+	if err != nil {
+		panic(err)
+	}
 	itemNameByID = make([]string, 789+1)
 	for i, v := range itemIDs {
 		itemNameByID[v.ProtocolID] = i

@@ -6,7 +6,7 @@ type world struct {
 	chunks   map[chunkLoc]*Chunk
 }
 
-// Chunk store a 256*16*16 clolumn blocks
+// Chunk store a 256*16*16 column blocks
 type Chunk struct {
 	sections [16]Section
 }

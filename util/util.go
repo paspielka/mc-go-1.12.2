@@ -1,20 +1,17 @@
 package util
 
-//NonSolid 测试方块是否可以被穿过
+// NonSolid tests if a square can be passed through
 func NonSolid(bs string) bool {
 	return bs == "minecraft:air" || //空气
 		bs == "minecraft:cave_air" ||
-
 		bs == "minecraft:water" || //液体
 		bs == "minecraft:lava" ||
-
 		bs == "minecraft:oak_sapling" || //树苗
 		bs == "minecraft:spruce_sapling" ||
 		bs == "minecraft:birch_sapling" ||
 		bs == "minecraft:jungle_sapling" ||
 		bs == "minecraft:acacia_sapling" ||
 		bs == "minecraft:dark_oak_sapling" ||
-
 		bs == "minecraft:dandelion" || //花
 		bs == "minecraft:poppy" ||
 		bs == "minecraft:blue_orchid" ||
@@ -32,7 +29,6 @@ func NonSolid(bs string) bool {
 		bs == "minecraft:lilac" ||
 		bs == "minecraft:rose_bush" ||
 		bs == "minecraft:peony" ||
-
 		bs == "minecraft:torch" ||
 		bs == "minecraft:wall_torch"
 	//unfinished

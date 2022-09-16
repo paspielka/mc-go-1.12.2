@@ -5,17 +5,17 @@ import (
 	"fmt"
 )
 
-//ChatMsg is a message sent by other
+// ChatMsg is a message sent by other
 type ChatMsg jsonChat
 
 type jsonChat struct {
 	Text string `json:"text"`
 
-	Bold          bool   `json:"bold"`          //粗体
-	Italic        bool   `json:"Italic"`        //斜体
-	UnderLined    bool   `json:"underlined"`    //下划线
-	StrikeThrough bool   `json:"strikethrough"` //删除线
-	Obfuscated    bool   `json:"obfuscated"`    //随机
+	Bold          bool   `json:"bold"`
+	Italic        bool   `json:"Italic"`
+	UnderLined    bool   `json:"underlined"`
+	StrikeThrough bool   `json:"strikethrough"`
+	Obfuscated    bool   `json:"obfuscated"`
 	Color         string `json:"color"`
 
 	Translate string            `json:"translate"`
@@ -52,7 +52,7 @@ var colors = map[string]int{
 }
 
 // String return the message with escape sequence for ansi color.
-// On windows, you may want print this string using
+// On Windows, you may want print this string using
 // github.com/mattn/go-colorable.
 func (c ChatMsg) String() (s string) {
 	var format string

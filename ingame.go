@@ -16,7 +16,7 @@ type Player struct {
 	OnGround bool
 
 	HeldItem  int
-	Inventory []Solt
+	Inventory []Slot
 
 	FoodSaturation float32
 }
@@ -757,9 +757,9 @@ func handleWindowItemsPacket(g *Game, r *bytes.Reader) (err error) {
 		return
 	}
 
-	solts := make([]Solt, Count)
+	slots := make([]Slot, Count)
 	for i := int16(0); i < Count; i++ {
-		solts[i], err = unpackSolt(r)
+		slots[i], err = unpackSolt(r)
 		if err != nil {
 			return
 		}
@@ -767,7 +767,7 @@ func handleWindowItemsPacket(g *Game, r *bytes.Reader) (err error) {
 
 	switch WindowID {
 	case 0: //is player inventory
-		g.player.Inventory = solts
+		g.player.Inventory = slots
 		g.events <- InventoryChangeEvent(-2)
 	}
 	return nil
@@ -788,7 +788,7 @@ func sendPlayerPositionAndLookPacket(g *Game) {
 	data = append(data, pk.PackFloat(g.player.Yaw)...)
 	data = append(data, pk.PackFloat(g.player.Pitch)...)
 	data = append(data, pk.PackBoolean(g.player.OnGround))
-	fmt.Printf("X:%f Y:%f Z:%f Yaw:%f Pitch:%f OnGround:%t", g.player.X, g.player.Y, g.player.Z, g.player.Yaw, g.player.Pitch, g.player.OnGround)
+	//fmt.Printf("X:%f Y:%f Z:%f Yaw:%f Pitch:%f OnGround:%t\n", g.player.X, g.player.Y, g.player.Z, g.player.Yaw, g.player.Pitch, g.player.OnGround)
 
 	g.sendChan <- pk.Packet{
 		ID:   0x0E,
@@ -801,7 +801,7 @@ func sendPlayerLookPacket(g *Game) {
 	data = append(data, pk.PackFloat(g.player.Yaw)...)
 	data = append(data, pk.PackFloat(g.player.Pitch)...)
 	data = append(data, pk.PackBoolean(g.player.OnGround))
-	fmt.Printf("Yaw:%f Pitch:%f OnGround:%t", g.player.Yaw, g.player.Pitch, g.player.OnGround)
+	//fmt.Printf("Yaw:%f Pitch:%f OnGround:%t\n", g.player.Yaw, g.player.Pitch, g.player.OnGround)
 	g.sendChan <- pk.Packet{
 		ID:   0x0F,
 		Data: data,
@@ -836,7 +836,7 @@ func sendClientStatusPacket(g *Game, status int32) {
 	}
 }
 
-// hand could be 0: main hand, 1: off hand
+// hand could be 0: main hand, 1: offhand
 func sendAnimationPacket(g *Game, hand int32) {
 	data := pk.PackVarInt(hand)
 	g.sendChan <- pk.Packet{

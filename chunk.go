@@ -9,7 +9,7 @@ import (
 
 func unpackChunkDataPacket(p *pk.Packet, hasSkyLight bool) (c *Chunk, x, y int, err error) {
 	reader := bytes.NewReader(p.Data)
-	//区块坐标
+	// Block coordinates
 	X, err := pk.UnpackInt32(reader)
 	if err != nil {
 		return nil, 0, 0, err
@@ -25,13 +25,13 @@ func unpackChunkDataPacket(p *pk.Packet, hasSkyLight bool) (c *Chunk, x, y int, 
 	}
 	FullChunk := fc != 0x00
 
-	//主掩码
+	//Master Mask
 	PrimaryBitMask, err := pk.UnpackVarInt(reader)
 	if err != nil {
 		return nil, 0, 0, err
 	}
 
-	//区块数据
+	// Block Data
 	Size, err := pk.UnpackVarInt(reader)
 	if err != nil {
 		return nil, 0, 0, err
@@ -42,11 +42,11 @@ func unpackChunkDataPacket(p *pk.Packet, hasSkyLight bool) (c *Chunk, x, y int, 
 		return nil, 0, 0, err
 	}
 
-	//实体信息
+	// Entity Information
 	// NumberofBlockEntities, len := pk.UnpackVarInt(p.Data[index:])
 	// index += len
 
-	//解析区块数据
+	// Parsing Block Data
 	cc, err := readChunkColumn(FullChunk, PrimaryBitMask, bytes.NewReader(Data), hasSkyLight)
 	if err != nil {
 		panic(err)
@@ -62,7 +62,7 @@ func readChunkColumn(isFull bool, mask int32, data *bytes.Reader, hasSkyLight bo
 			if err != nil {
 				return nil, fmt.Errorf("read BitsPerBlock fail: %v", err)
 			}
-			//读调色板
+			//Read Palette
 			var palette []uint
 			if BitsPerBlock < 9 {
 				length, err := pk.UnpackVarInt(data)
@@ -81,7 +81,7 @@ func readChunkColumn(isFull bool, mask int32, data *bytes.Reader, hasSkyLight bo
 				}
 			}
 
-			//Section数据
+			//Section data
 			DataArrayLength, err := pk.UnpackVarInt(data)
 			if err != nil {
 				return nil, fmt.Errorf("read DataArrayLength fail: %v", err)
@@ -94,7 +94,7 @@ func readChunkColumn(isFull bool, mask int32, data *bytes.Reader, hasSkyLight bo
 					return nil, fmt.Errorf("read DataArray fail: %v", err)
 				}
 			}
-			//用数据填充区块
+			//Populate blocks with data
 			fillSection(&c.sections[sectionY], perBits(BitsPerBlock), DataArray, palette)
 
 			//throw BlockLight data
@@ -112,7 +112,7 @@ func readChunkColumn(isFull bool, mask int32, data *bytes.Reader, hasSkyLight bo
 			}
 		}
 	}
-	if isFull { //need recive Biomes datas
+	if isFull { // Read Biomes Data
 		_, err := pk.ReadNBytes(data, 256*4)
 		if err != nil {
 			return nil, fmt.Errorf("read Biomes fail: %v", err)

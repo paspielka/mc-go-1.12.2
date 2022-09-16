@@ -14,7 +14,10 @@ var blockStates map[string]struct {
 var blockNameByID []string
 
 func init() {
-	json.Unmarshal([]byte(blockStatesJSON), &blockStates)
+	err := json.Unmarshal([]byte(blockStatesJSON), &blockStates)
+	if err != nil {
+		panic(err)
+	}
 	blockNameByID = make([]string, 8598+1)
 	for i, v := range blockStates {
 		for _, s := range v.States {

@@ -6,44 +6,44 @@ import (
 	pk "github.com/edouard127/mc-go-1.12.2/packet"
 )
 
-// Solt 表示物品栏的一格
-type Solt struct {
+// Slot indicates a slot in a window
+type Slot struct {
 	ID    int
 	Count byte
 }
 
-type soltNBT struct {
+type slotNBT struct {
 }
 
-func unpackSolt(b *bytes.Reader) (Solt, error) {
+func unpackSolt(b *bytes.Reader) (Slot, error) {
 	index := 0
 	p, err := b.ReadByte()
 	if err != nil {
-		return Solt{}, err
+		return Slot{}, err
 	}
 	Present := p != 0x00
 	index++
 	if Present {
 		itemID, err := pk.UnpackVarInt(b)
 		if err != nil {
-			return Solt{}, err
+			return Slot{}, err
 		}
 		count, err := b.ReadByte()
 		if err != nil {
-			return Solt{}, err
+			return Slot{}, err
 		}
 		index++
 
 		//nbt.Unmarshal(nbt.Uncompressed)
 
-		return Solt{
+		return Slot{
 			ID:    int(itemID),
 			Count: count,
 		}, nil
 	}
-	return Solt{}, nil
+	return Slot{}, nil
 }
 
-func (s Solt) String() string {
+func (s Slot) String() string {
 	return fmt.Sprintf("solt[%s %d]", itemNameByID[s.ID], s.Count)
 }
