@@ -124,7 +124,7 @@ type JoinGameEvent struct {
 }
 
 func handlePack(g *Game, p *pk.Packet) (err error) {
-	//fmt.Printf("Packet ID: 0x%X\n", p.ID)
+	g.debugLogs <- fmt.Sprintf("recv packet 0x%X", p.ID)
 	reader := bytes.NewReader(p.Data)
 
 	switch p.ID {
@@ -183,7 +183,7 @@ func handlePack(g *Game, p *pk.Packet) (err error) {
 	case 0x4D:
 		err = handleSoundEffect(g, reader)
 	default:
-		//fmt.Printf("Ignore packet id: 0x%X\n", p.ID)
+		g.debugLogs <- fmt.Sprintf("unhandled packet 0x%X", p.ID)
 	}
 	return
 }

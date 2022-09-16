@@ -26,10 +26,11 @@ type Game struct {
 	player    Player
 	wd        world //the map data
 
-	sendChan chan pk.Packet  //be used when HandleGame
-	recvChan chan *pk.Packet //be used when HandleGame
-	events   chan Event
-	motion   chan func() //used to submit a function and HandleGame do
+	sendChan  chan pk.Packet  //be used when HandleGame
+	recvChan  chan *pk.Packet //be used when HandleGame
+	events    chan Event
+	motion    chan func() //used to submit a function and HandleGame do
+	debugLogs chan string
 }
 
 // PingAndList chack server status and list online player
