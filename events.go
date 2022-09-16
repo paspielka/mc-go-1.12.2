@@ -1,6 +1,6 @@
 package gomcbot
 
-//Event happends in game and you can recive it from what Game.GetEvent() returns
+// Event happends in game and you can recive it from what Game.GetEvent() returns
 type Event interface{}
 
 /*
@@ -8,22 +8,22 @@ type Event interface{}
 	When event happens, match signal will be senting to Game.Event
 */
 
-//DisconnectEvent sent when server disconnect this client. The value is the reason.
+// DisconnectEvent sent when server disconnect this client. The value is the reason.
 type DisconnectEvent ChatMsg
 
-//PlayerSpawnEvent sent when this client is ready to playing.
+// PlayerSpawnEvent sent when this client is ready to playing.
 type PlayerSpawnEvent struct{}
 
-//PlayerDeadEvent sent when player is dead
+// PlayerDeadEvent sent when player is dead
 type PlayerDeadEvent struct{}
 
-//InventoryChangeEvent sent when player's inventory is changed.
-//The value is the changed slot id.
-//-1 means the cursor (the item currently dragged with the mouse)
-//and -2 if the server update all of the slots.
+// InventoryChangeEvent sent when player's inventory is changed.
+// The value is the changed slot id.
+// -1 means the cursor (the item currently dragged with the mouse)
+// and -2 if the server update all of the slots.
 type InventoryChangeEvent int16
 
-//BlockChangeEvent sent when a block has been broken or placed
+// BlockChangeEvent sent when a block has been broken or placed
 type BlockChangeEvent struct{}
 
 // ChatMessageEvent sent when chat message was recived.
@@ -52,4 +52,7 @@ type SoundEffectEvent struct {
 // Note that HandleGame will block if you don't recive from Events
 func (g *Game) GetEvents() <-chan Event {
 	return g.events
+}
+func (g *Game) GetDebugLogs() <-chan string {
+	return g.debugLogs
 }
