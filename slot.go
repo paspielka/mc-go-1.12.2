@@ -2,9 +2,8 @@ package gomcbot
 
 import (
 	"bytes"
-	pk "github.com/kamigen/mc-go-1.12.2/packet"
-	// "github.com/Nightgunner5/go.nbt"
 	"fmt"
+	pk "github.com/Edouard127/mc-go-1.12.2/packet"
 )
 
 // Solt 表示物品栏的一格

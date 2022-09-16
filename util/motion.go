@@ -1,7 +1,7 @@
 package util
 
 import (
-	bot "github.com/kamigen/mc-go-1.12.2"
+	bot "github.com/Edouard127/mc-go-1.12.2"
 	"time"
 )
 

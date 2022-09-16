@@ -1,6 +1,6 @@
 package gomcbot
 
-import pk "github.com/kamigen/mc-go-1.12.2/packet"
+import pk "github.com/Edouard127/mc-go-1.12.2/packet"
 
 // Settings 客户端设置
 type Settings struct {
