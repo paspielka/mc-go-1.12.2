@@ -169,10 +169,8 @@ func handlePack(g *Game, p *pk.Packet) (err error) {
 		// handleDeclareRecipesPacket(g, reader)
 	case 0x29:
 		// err = handleEntityLookAndRelativeMove(g, reader)
-	case 0x36:
-		handleEntityHeadLookPacket(g, reader)
 	case 0x28:
-		err = handleEntityRelativeMovePacket(g, reader)
+		handleEntityHeadLookPacket(g, reader)
 	case 0x1F:
 		err = handleKeepAlivePacket(g, reader)
 	/*case 0x26:
@@ -631,7 +629,16 @@ func handleEntityLookAndRelativeMove(g *Game, r *bytes.Reader) error {
 }
 
 func handleEntityHeadLookPacket(g *Game, r *bytes.Reader) {
-
+	ID, _ := pk.UnpackVarInt(r)
+	E := g.wd.Entities[ID]
+	if E != nil {
+		yaw, _ := r.ReadByte()
+		pitch, _ := r.ReadByte()
+		E.SetRotation(Vector2{
+			float64(yaw) * 360 / 256,
+			float64(pitch) * 360 / 256,
+		})
+	}
 }
 
 func handleEntityRelativeMovePacket(g *Game, r *bytes.Reader) error {
