@@ -49,6 +49,11 @@ type ChatMessageEvent struct {
 	Pos byte
 }
 
+type TitleEvent struct {
+	Action int32
+	Text   string
+}
+
 // SoundEffectEvent sent when a sound should be played
 // for sound id, check: https://pokechu22.github.io/Burger/1.13.2.html#sounds
 // x, y, z is the position the sound played

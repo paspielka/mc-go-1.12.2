@@ -198,10 +198,28 @@ func handlePack(g *Game, p *pk.Packet) (err error) {
 		err = handleSoundEffect(g, reader)
 	case 0x3E: // Entity velocity
 		err = handleEntityVelocity(g, reader)
+	case 0x48: // Title
+		err = handleTitle(g, reader)
 	default:
 		//fmt.Printf("unhandled packet 0x%X\n", p.ID)
 	}
 	return
+}
+
+func handleTitle(g *Game, reader *bytes.Reader) error {
+	action, err := pk.UnpackVarInt(reader)
+	if err != nil {
+		return err
+	}
+	switch action {
+	case 0:
+		title, err := pk.UnpackString(reader)
+		if err != nil {
+			return err
+		}
+		g.events <- TitleEvent{Action: action, Text: title}
+	}
+	return nil
 }
 
 func handleEntityVelocity(g *Game, reader *bytes.Reader) error {
@@ -231,7 +249,6 @@ func handleEntityVelocity(g *Game, reader *bytes.Reader) error {
 		Velocity: velocity,
 	}
 	updateVelocity(g, entityID, velocity)
-	fmt.Printf("Entity %d velocity: %d, %d, %d\n", entityID, velX, velY, velZ)
 	return nil
 }
 func updateVelocity(g *Game, entityId int32, velocity Vector3) {
@@ -638,7 +655,6 @@ func handleEntityHeadLookPacket(g *Game, r *bytes.Reader) {
 			float64(yaw) * 360 / 256,
 			float64(pitch) * 360 / 256,
 		})
-		fmt.Printf("Entity %d HeadLook: %f, %f", ID, E.Rotation.X, E.Rotation.Y)
 	}
 }
 
@@ -835,7 +851,7 @@ func sendPlayerDiggingPacket(g *Game, status int32, x, y, z int, face Face) {
 	data = append(data, byte(face))
 
 	g.sendChan <- pk.Packet{
-		ID:   0x18,
+		ID:   0x14,
 		Data: data,
 	}
 }
@@ -843,7 +859,7 @@ func sendPlayerDiggingPacket(g *Game, status int32, x, y, z int, face Face) {
 func sendUseItemPacket(g *Game, hand int32) {
 	data := pk.PackVarInt(hand)
 	g.sendChan <- pk.Packet{
-		ID:   0x2A,
+		ID:   0x20,
 		Data: data,
 	}
 }
