@@ -10,29 +10,45 @@ import (
 
 // Player includes the player's status.
 type Player struct {
-	entityID int32
-	UUID     [2]int64 //128bit UUID
+	LivingEntity
+	UUID [2]int64 //128bit UUID
 
-	X, Y, Z    float64
-	Yaw, Pitch float32
-	OnGround   bool
+	OnGround bool
 
 	HeldItem  int
 	Inventory []Solt
 
-	Health         float32
-	Food           int32
 	FoodSaturation float32
 }
 
+type LivingEntity struct {
+	ID         int32
+	X, Y, Z    float64
+	Yaw, Pitch float32
+	Position   Vector3
+	Rotation   Vector2
+	Health     float32
+	Food       int32
+	onGround   bool
+}
+
+func (p *LivingEntity) SetPosition(v3 Vector3) {
+	p.Position = v3
+}
+
+func (p *LivingEntity) SetRotation(v Vector2) {
+	p.Yaw = float32(v.X)
+	p.Pitch = float32(v.Y)
+}
+
 // EntityID get player's entity ID.
-func (p *Player) EntityID() int32 {
-	return p.entityID
+func (p *LivingEntity) EntityID() int32 {
+	return p.ID
 }
 
 // GetPosition return the player's position
-func (p *Player) GetPosition() (x, y, z float64) {
-	return p.X, p.Y, p.Z
+func (p *Player) GetPosition() Vector3 {
+	return p.Position
 }
 
 // GetBlockPos return the position of the Block at player's feet
@@ -124,14 +140,14 @@ type JoinGameEvent struct {
 }
 
 func handlePack(g *Game, p *pk.Packet) (err error) {
-	fmt.Printf("recv packet 0x%X\n", p.ID)
+	//fmt.Printf("recv packet 0x%X\n", p.ID)
 	reader := bytes.NewReader(p.Data)
 
 	switch p.ID {
 	case 0x23:
 		err = handleJoinGamePacket(g, reader)
 		g.events <- JoinGameEvent{
-			EntityID: g.player.entityID,
+			EntityID: g.player.EntityID(),
 		}
 	case 0x18:
 		handlePluginPacket(g, reader)
@@ -182,10 +198,52 @@ func handlePack(g *Game, p *pk.Packet) (err error) {
 	// 	err = handleSetSlotPacket(g, reader)
 	case 0x4D:
 		err = handleSoundEffect(g, reader)
+	case 0x3E: // Entity velocity
+		err = handleEntityVelocity(g, reader)
 	default:
-		fmt.Printf("unhandled packet 0x%X\n", p.ID)
+		//fmt.Printf("unhandled packet 0x%X\n", p.ID)
 	}
 	return
+}
+
+func handleEntityVelocity(g *Game, reader *bytes.Reader) error {
+	entityID, err := pk.UnpackVarInt(reader)
+	if err != nil {
+		return err
+	}
+	velX, err := pk.UnpackInt16(reader)
+	if err != nil {
+		return err
+	}
+	velY, err := pk.UnpackInt16(reader)
+	if err != nil {
+		return err
+	}
+	velZ, err := pk.UnpackInt16(reader)
+	if err != nil {
+		return err
+	}
+	var velocity = Vector3{
+		X: float64(velX) / 8000,
+		Y: float64(velY) / 8000,
+		Z: float64(velZ) / 8000,
+	}
+	g.events <- EntityVelocityEvent{
+		EntityID: entityID,
+		Velocity: velocity,
+	}
+	updateVelocity(g, entityID, velocity)
+	fmt.Printf("Entity %d velocity: %d, %d, %d\n", entityID, velX, velY, velZ)
+	return nil
+}
+func updateVelocity(g *Game, entityId int32, velocity Vector3) {
+	for i, e := range g.wd.Entities {
+		if e.ID == entityId {
+			fmt.Printf("Entity %d velocity: %f, %f, %f\n", entityId, velocity.X, velocity.Y, velocity.Z)
+			g.wd.Entities[i].SetPosition(g.wd.Entities[i].Position.Add(velocity))
+			return
+		}
+	}
 }
 
 func handleSoundEffect(g *Game, r *bytes.Reader) error {
@@ -501,11 +559,9 @@ func handlePlayerPositionAndLookPacket(g *Game, r *bytes.Reader) error {
 	} else {
 		g.player.Pitch += pitch
 	}
-	fmt.Printf("Player Position: %v, %v, %v\n", g.player.X, g.player.Y, g.player.Z)
 	//confirm this packet with Teleport Confirm
 	TeleportID, _ := pk.UnpackVarInt(r)
 	sendTeleportConfirmPacket(g, TeleportID)
-	fmt.Printf("Teleport Confirm: %v\n", TeleportID)
 	sendPlayerPositionAndLookPacket(g)
 	return nil
 }
@@ -532,10 +588,6 @@ func handleEntityLookAndRelativeMove(g *Game, r *bytes.Reader) error {
 	}
 	E := g.wd.Entities[ID]
 	if E != nil {
-		P, ok := E.(*Player)
-		if !ok {
-			return nil
-		}
 		DeltaX, err := pk.UnpackInt16(r)
 		if err != nil {
 			return err
@@ -558,18 +610,22 @@ func handleEntityLookAndRelativeMove(g *Game, r *bytes.Reader) error {
 		if err != nil {
 			return err
 		}
-		P.Yaw += float32(yaw) * (1.0 / 256)
-		P.Pitch += float32(pitch) * (1.0 / 256)
+		var rotation = Vector2{
+			float64(yaw) * 360 / 256,
+			float64(pitch) * 360 / 256,
+		}
+		E.SetRotation(rotation)
 
 		og, err := r.ReadByte()
 		if err != nil {
 			return err
 		}
-		P.OnGround = og != 0x00
-
-		P.X += float64(DeltaX) / 128
-		P.Y += float64(DeltaY) / 128
-		P.Z += float64(DeltaZ) / 128
+		E.onGround = og != 0x00
+		E.SetPosition(Vector3{
+			E.Position.X + float64(DeltaX)/4096,
+			E.Position.Y + float64(DeltaY)/4096,
+			E.Position.Z + float64(DeltaZ)/4096,
+		})
 	}
 	return nil
 }
@@ -585,10 +641,6 @@ func handleEntityRelativeMovePacket(g *Game, r *bytes.Reader) error {
 	}
 	E := g.wd.Entities[ID]
 	if E != nil {
-		P, ok := E.(*Player)
-		if !ok {
-			return nil
-		}
 		DeltaX, err := pk.UnpackInt16(r)
 		if err != nil {
 			return err
@@ -606,11 +658,12 @@ func handleEntityRelativeMovePacket(g *Game, r *bytes.Reader) error {
 		if err != nil {
 			return err
 		}
-		P.OnGround = og != 0x00
-
-		P.X += float64(DeltaX) / 128
-		P.Y += float64(DeltaY) / 128
-		P.Z += float64(DeltaZ) / 128
+		E.onGround = og != 0x00
+		E.SetPosition(Vector3{
+			E.Position.X + float64(DeltaX)/4096,
+			E.Position.Y + float64(DeltaY)/4096,
+			E.Position.Z + float64(DeltaZ)/4096,
+		})
 	}
 	return nil
 }
@@ -627,7 +680,7 @@ func handleEntityPacket(g *Game, r *bytes.Reader) {
 
 func handleSpawnPlayerPacket(g *Game, r *bytes.Reader) (err error) {
 	np := new(Player)
-	np.entityID, err = pk.UnpackVarInt(r)
+	np.ID, err = pk.UnpackVarInt(r)
 	if err != nil {
 		return
 	}
@@ -665,7 +718,7 @@ func handleSpawnPlayerPacket(g *Game, r *bytes.Reader) (err error) {
 	np.Yaw = float32(yaw) * (1.0 / 256)
 	np.Pitch = float32(pitch) * (1.0 / 256)
 
-	g.wd.Entities[np.entityID] = np //把该玩家添加到全局实体表里面
+	g.wd.Entities[np.ID] = &np.LivingEntity //把该玩家添加到全局实体表里面
 	return nil
 }
 

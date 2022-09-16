@@ -81,7 +81,7 @@ func (p *Auth) JoinServer(addr string, port int) (g *Game, err error) {
 	g.settings = DefaultSettings //默认设置
 	g.reciver = bufio.NewReader(g.conn)
 	g.sender = g.conn
-	g.wd.Entities = make(map[int32]Entity)
+	g.wd.Entities = make(map[int32]*LivingEntity)
 	g.wd.chunks = make(map[chunkLoc]*Chunk)
 	g.events = make(chan Event)
 	g.motion = make(chan func())

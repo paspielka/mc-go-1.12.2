@@ -10,8 +10,8 @@ import (
 // TweenLookAt is the Tween version of LookAt
 func TweenLookAt(g *bot.Game, x, y, z float64, t time.Duration) {
 	p := g.GetPlayer()
-	x0, y0, z0 := p.GetPosition()
-	x, y, z = x-x0, y-y0, z-z0
+	v3 := p.GetPosition()
+	x, y, z = x-v3.X, y-v3.Y, z-v3.Z
 
 	r := math.Sqrt(x*x + y*y + z*z)
 	yaw := -math.Atan2(x, z) / math.Pi * 180
@@ -41,19 +41,19 @@ func TweenLook(g *bot.Game, yaw, pitch float32, t time.Duration) {
 func TweenLineMove(g *bot.Game, x, z float64) error {
 	p := g.GetPlayer()
 	start := time.Now()
-	x0, y0, z0 := p.GetPosition()
+	v3 := p.GetPosition()
 
-	if similar(x0, x) && similar(z0, z) {
+	if similar(v3.X, x) && similar(v3.Z, z) {
 		return nil
 	}
 
-	y0 = math.Floor(y0)
-	ofstX, ofstZ := x-x0, z-z0
+	v3.Y = math.Floor(v3.Y) + 0.5
+	ofstX, ofstZ := x-v3.X, z-v3.Z
 	t := time.Duration(float64(time.Second) * (math.Sqrt(ofstX*ofstX+ofstZ*ofstZ) / 4.2))
 	var scale float64
 	for scale < 1 {
 		scale = float64(time.Since(start)) / float64(t)
-		g.SetPosition(x0+ofstX*scale, y0, z0+ofstZ*scale, true)
+		g.SetPosition(v3.X+ofstX*scale, v3.Y, v3.Z+ofstZ*scale, true)
 		time.Sleep(time.Millisecond * 50)
 	}
 
