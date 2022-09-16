@@ -3,7 +3,7 @@ package gomcbot
 import (
 	"bytes"
 	"fmt"
-	pk "github.com/Edouard127/mc-go-1.12.2/packet"
+	pk "github.com/edouard127/mc-go-1.12.2/packet"
 	"math"
 	"time"
 )

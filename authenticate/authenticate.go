@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	mb "github.com/Edouard127/mc-go-1.12.2"
+	mb "github.com/edouard127/mc-go-1.12.2"
 	"io/ioutil"
 	"net/http"
 )

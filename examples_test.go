@@ -2,8 +2,8 @@ package gomcbot_test
 
 import (
 	"fmt"
-	bot "github.com/Edouard127/mc-go-1.12.2"
-	auth "github.com/Edouard127/mc-go-1.12.2/authenticate"
+	bot "github.com/edouard127/mc-go-1.12.2"
+	auth "github.com/edouard127/mc-go-1.12.2/authenticate"
 )
 
 func ExamplePingAndList() {
