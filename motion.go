@@ -1,6 +1,7 @@
 package gomcbot
 
 import (
+	pk "github.com/edouard127/mc-go-1.12.2/packet"
 	"math"
 	"time"
 )
@@ -11,7 +12,7 @@ func (g *Game) SetPosition(x, y, z float64, onGround bool) {
 	g.motion <- func() {
 		g.player.X, g.player.Y, g.player.Z = x, y, z
 		g.player.OnGround = onGround
-		sendPlayerPositionPacket(g) //向服务器更新位置
+		sendPlayerPositionPacket(g) // Update the location to the server
 	}
 }
 
@@ -36,7 +37,7 @@ func (g *Game) LookAt(x, y, z float64) {
 func (g *Game) LookYawPitch(yaw, pitch float32) {
 	g.motion <- func() {
 		g.player.Yaw, g.player.Pitch = yaw, pitch
-		sendPlayerLookPacket(g) //向服务器更新朝向
+		sendPlayerLookPacket(g) // Update the orientation to the server
 	}
 }
 
@@ -49,8 +50,24 @@ func (g *Game) SwingHand(hand bool) {
 		sendAnimationPacket(g, 1)
 	}
 }
+func (g *Game) Attack(e LivingEntity) {
+	sendUseEntityPacket(g, e.EntityID(), 1, e.Position)
+}
 
-// Dig a block in the position and wait for it's breaked
+func sendUseEntityPacket(g *Game, target int32, action int32, targetPos Vector3) {
+	var data []byte
+	data = append(data, pk.PackVarInt(target)...)
+	data = append(data, pk.PackVarInt(action)...)
+	data = append(data, pk.PackDouble(targetPos.X)...)
+	data = append(data, pk.PackDouble(targetPos.Y)...)
+	data = append(data, pk.PackDouble(targetPos.Z)...)
+	g.sendChan <- pk.Packet{
+		ID:   0x0A,
+		Data: data,
+	}
+}
+
+// Dig a block in the position and wait
 func (g *Game) Dig(x, y, z int) error {
 	b := g.GetBlock(x, y, z).id
 	sendPlayerDiggingPacket(g, 0, x, y, z, Top) //start
