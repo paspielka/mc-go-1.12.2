@@ -66,10 +66,6 @@ func RawString(raw string) (s string) {
 		if raw[i] == '§' {
 			index = append(index, i+1)
 		}
-		// Check if the string has [000
-		if raw[i] == '' {
-			return raw
-		}
 	}
 	// Remove all §0
 	for i := len(index) - 1; i >= 0; i-- {
