@@ -36,6 +36,7 @@ func NewChatMsg(jsonMsg []byte) (jc ChatMsg, err error) {
 func ExtractSenderName(msg string) string {
 	if len(msg) > 0 {
 		if msg[0] == '<' {
+			msg = strings.Replace(msg, "§0", "", -1)
 			return msg[1:strings.Index(msg, ">")]
 		}
 	}
@@ -46,7 +47,7 @@ func ExtractContent(msg string) (string, string) {
 		if msg[0] == '<' {
 			msg = strings.Replace(msg, "§0", "", -1)
 			s := ExtractSenderName(msg)
-			return s, msg[len(s)+2:]
+			return s, msg[len(s)+1:]
 		}
 	}
 	return "", msg
