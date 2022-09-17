@@ -239,10 +239,10 @@ func (g *Game) GetBlock(x, y, z int) Block {
 }
 
 // GetPlayer return the player
-func (g *Game) GetPlayer() Player {
-	return g.Player
+func (g *Game) GetPlayer() *Player {
+	return &g.Player
 }
-func (g *Game) Attack(e LivingEntity) {
+func (g *Game) Attack(e *LivingEntity) {
 	SendUseEntityPacket(g, e.ID, 1, e.Position)
 }
 func (g *Game) SetPosition(v3 Vector3, onGround bool) {
@@ -253,7 +253,7 @@ func (g *Game) SetPosition(v3 Vector3, onGround bool) {
 	}
 }
 
-func (g *Game) ClosestEntity(r float64) (e *LivingEntity) {
+func (g *Game) ClosestEntity(r float64) *LivingEntity {
 	return g.World.ClosestEntity(g.GetPlayer().Position, r)
 }
 
