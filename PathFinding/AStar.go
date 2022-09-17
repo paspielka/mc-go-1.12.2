@@ -1,11 +1,10 @@
 package PathFinding
 
 import (
+	"fmt"
 	. "github.com/edouard127/mc-go-1.12.2/struct"
 	"math"
 )
-
-var IStar *AStar
 
 type AStar struct {
 	// Start is the start node
@@ -26,7 +25,7 @@ type AStar struct {
 	NodesEvaluated int
 }
 
-func Compute(ch chan bool) {
+func Compute(IStar *AStar) *AStar {
 	for !IStar.PathFound && IStar.NodesEvaluated < IStar.MaxNodes {
 		if len(IStar.OpenList) == 0 {
 			break
@@ -54,11 +53,17 @@ func Compute(ch chan bool) {
 		}
 		IStar.NodesEvaluated++
 	}
-	ch <- true
+	fmt.Println("Path found:", IStar.PathFound)
+	fmt.Println("Nodes evaluated:", IStar.NodesEvaluated)
+	fmt.Println("Path length:", len(IStar.Path.Nodes))
+	fmt.Println("Max nodes:", IStar.MaxNodes)
+	fmt.Println("Start:", IStar.Start.Position)
+	fmt.Println("End:", IStar.End.Position)
+	return IStar
 }
 
 func NewAStar(start, end *Node) *AStar {
-	IStar = &AStar{
+	return &AStar{
 		Start:          start,
 		End:            end,
 		OpenList:       []*Node{start},
@@ -68,7 +73,6 @@ func NewAStar(start, end *Node) *AStar {
 		MaxNodes:       10000,
 		NodesEvaluated: 0,
 	}
-	return IStar
 }
 
 func (n *Node) GetNeighbors() []*Node {

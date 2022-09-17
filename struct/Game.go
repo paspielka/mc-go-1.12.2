@@ -442,13 +442,13 @@ func HandleBlockChangePacket(g *Game, r *bytes.Reader) error {
 	if err != nil {
 		return err
 	}
-	c := g.World.Chunks[ChunkLoc{X: x >> 4, Y: z >> 4}]
+	c := g.World.Chunks[ChunkLoc{X: int(x) >> 4, Y: int(z) >> 4}]
 	if c != nil {
 		id, err := pk.UnpackVarInt(r)
 		if err != nil {
 			return err
 		}
-		c.Sections[y/16].Blocks[x&15][y&15][z&15] = Block{Id: uint(id)}
+		c.Sections[int(y)/16].Blocks[int(x)&15][int(y)&15][int(z)&15] = Block{Id: uint(id)}
 	}
 
 	return nil
@@ -913,6 +913,8 @@ func HandleSpawnPlayerPacket(g *Game, r *bytes.Reader) (err error) {
 func HandleSpawnPositionPacket(g *Game, r *bytes.Reader) (err error) {
 	g.Info.SpawnPosition.X, g.Info.SpawnPosition.Y, g.Info.SpawnPosition.Z, err =
 		pk.UnpackPosition(r)
+	// Update the player's position
+	g.Player.SetPosition(g.Info.SpawnPosition)
 	return
 }
 

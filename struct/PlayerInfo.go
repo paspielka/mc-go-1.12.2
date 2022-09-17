@@ -9,5 +9,5 @@ type PlayerInfo struct {
 	Difficulty       int
 	LevelType        string
 	ReducedDebugInfo bool
-	SpawnPosition    Position
+	SpawnPosition    Vector3
 }
