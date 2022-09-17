@@ -454,8 +454,14 @@ func HandleChatMessagePacket(g *Game, r *bytes.Reader) error {
 		return err
 	}
 	sender, content := ExtractContent(cm.String())
+	var raw string
+	if sender != "" {
+		raw = fmt.Sprintf("<%s> %s", sender, content)
+	} else {
+		raw = content
+	}
 	timestamp := time.Now().UnixMilli()
-	g.Events <- ChatMessageEvent{Content: content, Sender: sender, Timestamp: timestamp, Position: pos}
+	g.Events <- ChatMessageEvent{Content: content, Sender: sender, RawString: RawString(raw), Timestamp: timestamp, Position: pos}
 
 	return nil
 }

@@ -37,6 +37,7 @@ type BlockChangeEvent struct{}
 type ChatMessageEvent struct {
 	Content   string
 	Sender    string
+	RawString string
 	Timestamp int64
 	Position  byte
 }
