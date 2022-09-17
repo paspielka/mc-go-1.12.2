@@ -54,7 +54,7 @@ func ExtractContent(msg string) (string, string) {
 }
 
 func RawString(raw string) (s string) {
-	var escapeColors = []string{"[30m", "[34m", "[32m", "[36m", "[31m", "[35m", "[33m", "[37m", "[90m", "[94m", "[92m", "[96m", "[91m", "[95m", "[93m", "[97m"}
+	var escapeColors = []string{"[0m", "[30m", "[34m", "[32m", "[36m", "[31m", "[35m", "[33m", "[37m", "[90m", "[94m", "[92m", "[96m", "[91m", "[95m", "[93m", "[97m"}
 	for _, v := range escapeColors {
 		raw = strings.Replace(raw, v, "", -1)
 	}
