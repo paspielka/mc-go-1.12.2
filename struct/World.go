@@ -6,6 +6,23 @@ type World struct {
 	Chunks   map[ChunkLoc]*Chunk
 }
 
+func (w *World) ClosestEntity(v Vector3, maxDistance float64) *LivingEntity {
+	var (
+		closestEntity *LivingEntity
+		closestDist   float64
+	)
+
+	for _, e := range w.Entities {
+		dist := e.Position.DistanceTo(Vector3{v.X, v.Y, v.Z})
+		if dist < maxDistance && (closestEntity == nil || dist < closestDist) {
+			closestEntity = e
+			closestDist = dist
+		}
+	}
+
+	return closestEntity
+}
+
 // Chunk store a 256*16*16 column blocks
 type Chunk struct {
 	Sections [16]Section

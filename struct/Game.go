@@ -253,6 +253,10 @@ func (g *Game) SetPosition(v3 Vector3, onGround bool) {
 	}
 }
 
+func (g *Game) ClosestEntity(r float64) (e *LivingEntity) {
+	return g.World.ClosestEntity(g.GetPlayer().Position, r)
+}
+
 func (g *Game) WalkTo(x, y, z float64) {
 	g.Motion <- func() {
 		g.Player.X, g.Player.Y, g.Player.Z = x, y, z

@@ -18,7 +18,7 @@ func UnpackChunkDataPacket(p *pk.Packet, hasSkyLight bool) (c *Chunk, x, y int, 
 	if err != nil {
 		return nil, 0, 0, err
 	}
-	fmt.Println("Chunk: (", X, ", ", Y, ")") //Debug: Show Chunk loc
+	// fmt.Println("Chunk: (", X, ", ", Y, ")") //Debug: Show Chunk loc
 	fc, err := reader.ReadByte()
 	if err != nil {
 		return nil, 0, 0, err
