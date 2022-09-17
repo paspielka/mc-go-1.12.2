@@ -64,6 +64,13 @@ type EntityVelocityEvent struct {
 	Velocity Vector3
 }
 
+type EntityRelativeMoveEvent struct {
+	EntityID int32
+	DeltaX   float64
+	DeltaY   float64
+	DeltaZ   float64
+}
+
 type TickEvent struct{}
 
 // GetEvents returns an int type channel.

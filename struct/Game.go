@@ -128,8 +128,8 @@ func HandlePack(g *Game, p *pk.Packet) (err error) {
 		HandleEntityHeadLookPacket(g, reader)
 	case 0x1F:
 		err = HandleKeepAlivePacket(g, reader)
-	/*case 0x26:
-	handleEntityPacket(g, reader)*/
+	case 0x26:
+		err = HandleEntityRelativeMove(g, reader)
 	case 0x05:
 		err = HandleSpawnPlayerPacket(g, reader)
 	case 0x15:
@@ -165,6 +165,7 @@ func (g *Game) recvPacket() (*pk.Packet, error) {
 	return pk.RecvPacket(g.Receiver, g.threshold > 0)
 }
 
+// SendPacket send a packet to server
 func (g *Game) SendPacket(p *pk.Packet) error {
 	_, err := g.Sender.Write(p.Pack(g.threshold))
 	return err
@@ -552,6 +553,42 @@ func HandleEntityVelocity(g *Game, reader *bytes.Reader) error {
 	return nil
 }
 
+func HandleEntityRelativeMove(g *Game, reader *bytes.Reader) error {
+	entityID, err := pk.UnpackVarInt(reader)
+	if err != nil {
+		return err
+	}
+	x, err := reader.ReadByte()
+	if err != nil {
+		return err
+	}
+	y, err := reader.ReadByte()
+	if err != nil {
+		return err
+	}
+	z, err := reader.ReadByte()
+	if err != nil {
+		return err
+	}
+	//fmt.Println("EntityRelativeMove", entityID, x, y, z)
+	entity := g.World.Entities[entityID]
+	if entity == nil {
+		return nil
+	}
+	entity.SetPosition(entity.Position.Add(Vector3{
+		X: float64(x) / 32,
+		Y: float64(y) / 32,
+		Z: float64(z) / 32,
+	}))
+	g.Events <- EntityRelativeMoveEvent{
+		EntityID: entityID,
+		DeltaX:   float64(x) / 32,
+		DeltaY:   float64(y) / 32,
+		DeltaZ:   float64(z) / 32,
+	}
+	return nil
+}
+
 func HandleHeldItemPacket(g *Game, r *bytes.Reader) error {
 	hi, err := r.ReadByte()
 	if err != nil {
@@ -777,8 +814,8 @@ func HandleEntityHeadLookPacket(g *Game, r *bytes.Reader) {
 		yaw, _ := r.ReadByte()
 		pitch, _ := r.ReadByte()
 		E.SetRotation(Vector2{
-			X: float64(yaw) * 360 / 256,
-			Y: float64(pitch) * 360 / 256,
+			X: float64(yaw),
+			Y: float64(pitch),
 		})
 	}
 }
