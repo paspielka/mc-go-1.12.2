@@ -46,6 +46,7 @@ func (p *Auth) JoinServer(addr string, port int) (g *Game, err error) {
 	g.World.Chunks = make(map[ChunkLoc]*Chunk)
 	g.Events = make(chan Event)
 	g.Motion = make(chan func())
+	g.Server = Server{Addr: addr, Port: port}
 
 	// Handshake
 	hsPacket := NewHandshakePacket(340, addr, port, 2) // Constructing handshake packets
