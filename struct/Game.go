@@ -382,7 +382,10 @@ func SendTeleportConfirmPacket(g *Game, TeleportID int32) {
 
 func UpdateVelocity(g *Game, entityID int32, velocity Vector3) {
 	e := g.World.Entities[entityID]
-	e.SetPosition(e.Position.Add(velocity))
+	if e != nil {
+		panic("UpdateVelocity: entity not found")
+	}
+	(*e).SetPosition((*e).Position.Add(velocity))
 }
 
 func SendUseEntityPacket(g *Game, TargetEntityID int32, Type int32, Pos Vector3) {
