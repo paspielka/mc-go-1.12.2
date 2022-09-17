@@ -47,7 +47,7 @@ func ExtractContent(msg string) (string, string) {
 	if len(msg) > 0 {
 		if msg[0] == '<' {
 			s := ExtractSenderName(msg)
-			return s, msg[len(s)+5:]
+			return s, msg[len(s)+3:]
 		}
 	}
 	return "", msg
