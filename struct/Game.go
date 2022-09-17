@@ -240,6 +240,21 @@ func (g *Game) SetPosition(v3 Vector3, onGround bool) {
 	}
 }
 
+func (g *Game) WalkTo(x, y, z float64) {
+	g.Motion <- func() {
+		g.Player.X, g.Player.Y, g.Player.Z = x, y, z
+		SendPlayerPositionPacket(g) // Update the location to the server
+	}
+}
+
+func (g *Game) WalkStraight(dist float64) {
+	g.Motion <- func() {
+		g.Player.X += dist * math.Sin(float64(g.Player.Yaw))
+		g.Player.Z += dist * math.Cos(float64(g.Player.Yaw))
+		SendPlayerPositionPacket(g) // Update the location to the server
+	}
+}
+
 // LookAt method turn player's hand and make it look at a point.
 func (g *Game) LookAt(x, y, z float64) {
 	x0, y0, z0 := g.Player.X, g.Player.Y, g.Player.Z
