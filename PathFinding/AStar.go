@@ -23,7 +23,7 @@ type AStar struct {
 	NodesEvaluated int
 }
 
-func Compute() *Path {
+func Compute(ch chan bool) {
 	for !IStar.PathFound && IStar.NodesEvaluated < IStar.MaxNodes {
 		if len(IStar.OpenList) == 0 {
 			break
@@ -51,7 +51,7 @@ func Compute() *Path {
 		}
 		IStar.NodesEvaluated++
 	}
-	return IStar.Path
+	ch <- true
 }
 
 func NewAStar(start, end *Node) *AStar {
