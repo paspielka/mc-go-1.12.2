@@ -108,9 +108,9 @@ func HandlePack(g *Game, p *pk.Packet) (err error) {
 		g.SendChan <- *g.Settings.Pack()
 	case 0x3A:
 		err = HandleHeldItemPacket(g, reader)
-	/*case 0x20:
-	err = handleChunkDataPacket(g, p)
-	g.events <- BlockChangeEvent{}*/
+	case 0x20:
+		err = HandleChunkDataPacket(g, p)
+		g.Events <- BlockChangeEvent{}
 	case 0x2F:
 		err = HandlePlayerPositionAndLookPacket(g, reader)
 	case 0x54:
