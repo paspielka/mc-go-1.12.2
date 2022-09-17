@@ -3,7 +3,7 @@ package _struct
 import (
 	"encoding/json"
 	"fmt"
-	locales "github.com/edouard127/mc-go-1.12.2/locales"
+	"github.com/edouard127/mc-go-1.12.2/locales"
 )
 
 // ChatMsg is a message sent by other

@@ -1,4 +1,4 @@
-package world
+package _struct
 
 import "encoding/json"
 
@@ -11,17 +11,17 @@ var blockStates map[string]struct {
 	} `json:"states"`
 }
 
-var blockNameByID []string
+var BlockNameByID []string
 
 func init() {
 	err := json.Unmarshal([]byte(blockStatesJSON), &blockStates)
 	if err != nil {
 		panic(err)
 	}
-	blockNameByID = make([]string, 8598+1)
+	BlockNameByID = make([]string, 8598+1)
 	for i, v := range blockStates {
 		for _, s := range v.States {
-			blockNameByID[s.ID] = i
+			BlockNameByID[s.ID] = i
 		}
 	}
 }

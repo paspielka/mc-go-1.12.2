@@ -1,8 +1,4 @@
-package world
-
-import (
-	. "github.com/edouard127/mc-go-1.12.2/struct"
-)
+package _struct
 
 // World record all the things in the World where player at
 type World struct {
@@ -63,5 +59,5 @@ func (w *World) GetBlock(x, y, z int) Block {
 }
 
 func (b Block) String() string {
-	return blockNameByID[b.Id]
+	return BlockNameByID[b.Id]
 }

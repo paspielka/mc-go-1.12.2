@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"compress/zlib"
 	"fmt"
-	. "github.com/edouard127/mc-go-1.12.2/struct"
 	"io"
 	"math"
 )
@@ -77,7 +76,7 @@ func PackUint64(n uint64) (p []byte) {
 	return
 }
 
-//PackVarInt 打包一个VarInt
+// PackVarInt 打包一个VarInt
 func PackVarInt(n int32) (VarInt []byte) {
 	num := uint32(n)
 	for {
@@ -94,7 +93,7 @@ func PackVarInt(n int32) (VarInt []byte) {
 	return
 }
 
-//PackPosition 打包一个位置
+// PackPosition 打包一个位置
 func PackPosition(x, y, z int) (p []byte) {
 	p = make([]byte, 8)
 	position := (int64(x&0x3FFFFFF) << 38) | int64((y&0xFFF)<<26) | int64(z&0x3FFFFFF)
@@ -105,25 +104,17 @@ func PackPosition(x, y, z int) (p []byte) {
 	return
 }
 
-func PackVector3(v3 Vector3) (p []byte) {
-	var data []byte
-	data = append(data, PackDouble(v3.X)...)
-	data = append(data, PackDouble(v3.Y)...)
-	data = append(data, PackDouble(v3.Z)...)
-	return data
-}
-
-//PackFloat 打包一个32位浮点数
+// PackFloat 打包一个32位浮点数
 func PackFloat(f float32) (p []byte) {
 	return PackUint32(math.Float32bits(f))
 }
 
-//PackDouble 打包一个64位浮点数
+// PackDouble 打包一个64位浮点数
 func PackDouble(d float64) (p []byte) {
 	return PackUint64(math.Float64bits(d))
 }
 
-//PackBoolean 打包一个布尔值
+// PackBoolean 打包一个布尔值
 func PackBoolean(b bool) byte {
 	if b {
 		return 0x01
@@ -131,7 +122,7 @@ func PackBoolean(b bool) byte {
 	return 0x00
 }
 
-//ReadNBytes read N bytes from bytes.Reader
+// ReadNBytes read N bytes from bytes.Reader
 func ReadNBytes(b io.ByteReader, n int) (bs []byte, err error) {
 	bs = make([]byte, n)
 	for i := 0; i < n; i++ {
@@ -143,7 +134,7 @@ func ReadNBytes(b io.ByteReader, n int) (bs []byte, err error) {
 	return
 }
 
-//UnpackString 读取一个字符串
+// UnpackString 读取一个字符串
 func UnpackString(b io.ByteReader) (s string, err error) {
 	l, err := UnpackVarInt(b)
 	if err != nil {
@@ -155,7 +146,7 @@ func UnpackString(b io.ByteReader) (s string, err error) {
 	return string(bs), err
 }
 
-//UnpackVarInt 读取一个VarInt
+// UnpackVarInt 读取一个VarInt
 func UnpackVarInt(b io.ByteReader) (int32, error) {
 	var n uint
 	for i := 0; i < 5; i++ { //读数据前的长度标记
@@ -173,7 +164,7 @@ func UnpackVarInt(b io.ByteReader) (int32, error) {
 	return int32(n), nil //这里要把超过int32的负数溢出
 }
 
-//UnpackInt16 读取一个16位有符号整数
+// UnpackInt16 读取一个16位有符号整数
 func UnpackInt16(b io.ByteReader) (int16, error) {
 	bs, err := ReadNBytes(b, 2)
 	if err != nil {
@@ -182,7 +173,7 @@ func UnpackInt16(b io.ByteReader) (int16, error) {
 	return int16(bs[0])<<8 | int16(bs[1]), nil
 }
 
-//UnpackInt32 读取一个32位有符号整数
+// UnpackInt32 读取一个32位有符号整数
 func UnpackInt32(b io.ByteReader) (int32, error) {
 	bs, err := ReadNBytes(b, 4)
 	if err != nil {
@@ -191,7 +182,7 @@ func UnpackInt32(b io.ByteReader) (int32, error) {
 	return int32(bs[0])<<24 | int32(bs[1])<<16 | int32(bs[2])<<8 | int32(bs[3]), nil
 }
 
-//UnpackInt64 读取一个64位有符号整数
+// UnpackInt64 读取一个64位有符号整数
 func UnpackInt64(b io.ByteReader) (int64, error) {
 	bs, err := ReadNBytes(b, 8)
 	if err != nil {

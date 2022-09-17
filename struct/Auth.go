@@ -13,8 +13,6 @@ import (
 	"fmt"
 	"github.com/edouard127/mc-go-1.12.2/CFB8"
 	pk "github.com/edouard127/mc-go-1.12.2/packet"
-	. "github.com/edouard127/mc-go-1.12.2/packet/handler"
-	"github.com/edouard127/mc-go-1.12.2/world"
 	"io/ioutil"
 	"net"
 	"net/http"
@@ -45,7 +43,7 @@ func (p *Auth) JoinServer(addr string, port int) (g *Game, err error) {
 	g.Receiver = bufio.NewReader(g.Conn)
 	g.Sender = g.Conn
 	g.World.Entities = make(map[int32]*LivingEntity)
-	g.World.Chunks = make(map[world.ChunkLoc]*world.Chunk)
+	g.World.Chunks = make(map[ChunkLoc]*Chunk)
 	g.Events = make(chan Event)
 	g.Motion = make(chan func())
 
@@ -65,7 +63,7 @@ func (p *Auth) JoinServer(addr string, port int) (g *Game, err error) {
 		return
 	}
 	for {
-		//Recive Packet
+		//Receive Packet
 		var pack *pk.Packet
 		pack, err = g.recvPacket()
 		if err != nil {
@@ -288,4 +286,40 @@ func newLoginStartPacket(userName string) *pk.Packet {
 		Data: data,
 	}
 	return &pack
+}
+func HandleEncryptionRequest(g *Game, pack *pk.Packet, auth *Auth) error {
+	//Create AES symmetric encryption key
+	key, encoStream, decoStream := NewSymmetricEncryption()
+
+	//解析EncryptionRequest包
+	er, err := UnpackEncryptionRequest(*pack)
+	if err != nil {
+		return err
+	}
+	err = LoginAuth(auth.AsTk, auth.Name, auth.UUID, key, *er) // Verify to Mojang
+	if err != nil {
+		return fmt.Errorf("login fail: %v", err)
+	}
+
+	// Respond to encryption requests
+	var p *pk.Packet // Encryption Key Response
+	p, err = GenEncryptionKeyResponse(key, er.PublicKey, er.VerifyToken)
+	if err != nil {
+		return fmt.Errorf("gen encryption key response fail: %v", err)
+	}
+	err = g.SendPacket(p)
+	if err != nil {
+		return err
+	}
+
+	// Encrypted connections
+	g.Receiver = bufio.NewReader(cipher.StreamReader{ //Set receiver for AES
+		S: decoStream,
+		R: g.Conn,
+	})
+	g.Sender = cipher.StreamWriter{
+		S: encoStream,
+		W: g.Conn,
+	}
+	return nil
 }
