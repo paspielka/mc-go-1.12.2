@@ -2,6 +2,10 @@
 A golang minecraft robot package.
 
 [![forthebadge made-with-go](http://ForTheBadge.com/images/badges/made-with-go.svg)](https://go.dev/)
+![Size](https://img.shields.io/github/languages/code-size/Edouard127/mc-go-1.12.2)
+![License](https://img.shields.io/github/license/Edouard127/mc-go-1.12.2)
+![Contributors](https://img.shields.io/github/contributors/Edouard127/mc-go-1.12.2)
+![Stars](https://img.shields.io/github/stars/Edouard127/mc-go-1.12.2)
 
 
 
