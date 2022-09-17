@@ -274,16 +274,6 @@ func (g *Game) SwingHand(hand bool) {
 	}
 }
 
-// UseItem use the item in hand.
-// if hand is true, swing the main hand
-func (g *Game) UseItem(hand bool) {
-	if hand {
-		SendUseItemPacket(g, 0)
-	} else {
-		SendUseItemPacket(g, 1)
-	}
-}
-
 // SendAnimationPacket hand could be 0: main hand, 1: offhand
 func SendAnimationPacket(g *Game, hand int32) {
 	data := pk.PackVarInt(hand)
