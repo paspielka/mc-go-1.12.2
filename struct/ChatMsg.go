@@ -36,13 +36,8 @@ func NewChatMsg(jsonMsg []byte) (jc ChatMsg, err error) {
 func ExtractSenderName(msg string) string {
 	if len(msg) > 0 {
 		if msg[0] == '<' {
-			// FInd all the '§' and remove the next character
-			// This is a workaround for the fact that the server sends the message with the color codes
-			i := strings.Index(msg, "§")
-			for i != -1 {
-				msg = msg[:i] + msg[i:]
-				i = strings.Index(msg, "§")
-			}
+			// Remove minecraft color code
+			msg = strings.Replace(msg, "§", "", -1)
 			return msg[1:strings.Index(msg, ">")]
 		}
 	}
