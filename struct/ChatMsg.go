@@ -57,7 +57,7 @@ func RawString(raw string) (s string) {
 	// Get rid of all the [97m
 	i := strings.Index(raw, "\u001B[")
 	for i != -1 {
-		raw = raw[:i] + raw[i+8:]
+		raw = raw[i : i+9]
 		i = strings.Index(raw, "\u001B[")
 	}
 	// Get all index of §0
