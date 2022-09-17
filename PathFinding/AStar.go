@@ -1,7 +1,6 @@
 package PathFinding
 
 import (
-	"fmt"
 	. "github.com/edouard127/mc-go-1.12.2/struct"
 	"math"
 )
@@ -25,27 +24,8 @@ type AStar struct {
 	NodesEvaluated int
 }
 
-// Compute finds the best path from start to end in Minecraft world using A* algorithm like in https://github.com/lambda-plugins/ElytraBot/blob/main/src/main/kotlin/AStar.kt
+// Compute finds the best path from start to end in Minecraft world using A* algorithm
 func Compute(IStar *AStar, g *Game) *AStar {
-	for loc, _ := range g.World.Chunks {
-		for x := 0; x < 16; x++ {
-			for y := 0; y < 256; y++ {
-				for z := 0; z < 16; z++ {
-					if !g.GetBlock(x, y, z).IsAir() {
-						fmt.Println(g.GetBlock(x, y, z))
-						IStar.ClosedList = append(IStar.ClosedList, &Node{
-							Position: Vector3{
-								X: float64(loc.X*16 + x),
-								Y: float64(y),
-								Z: float64(loc.Y*16 + z),
-							},
-							Cost: 0,
-						})
-					}
-				}
-			}
-		}
-	}
 	for len(IStar.OpenList) > 0 {
 		// Get the node with the lowest cost
 		var currentNode *Node
