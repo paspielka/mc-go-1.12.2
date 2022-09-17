@@ -127,7 +127,7 @@ func HandlePack(g *Game, p *pk.Packet) (err error) {
 		err = HandleSpawnPlayerPacket(g, reader)
 	case 0x15:
 		err = HandleWindowItemsPacket(g, reader)
-	case 0x44:
+	case 0x41:
 		err = HandleUpdateHealthPacket(g, reader)
 	case 0x0F:
 		err = HandleChatMessagePacket(g, reader)
