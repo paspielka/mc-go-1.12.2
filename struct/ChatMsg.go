@@ -37,7 +37,7 @@ func ExtractSenderName(msg string) string {
 	if len(msg) > 0 {
 		if msg[0] == '<' {
 			// Remove minecraft color code
-			msg = strings.Replace(msg, "§", "", -1)
+			msg = strings.Replace(msg, "§", "", 1)
 			return msg[1:strings.Index(msg, ">")]
 		}
 	}
