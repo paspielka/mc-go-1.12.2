@@ -53,6 +53,21 @@ func ExtractContent(msg string) (string, string) {
 	return "", msg
 }
 
+func RawString(raw string) (s string) {
+	// Get all index of §0
+	var index []int
+	for i := 0; i < len(raw); i++ {
+		if raw[i] == '§' {
+			index = append(index, i+1)
+		}
+	}
+	// Remove all §0
+	for i := len(index) - 1; i >= 0; i-- {
+		raw = raw[:index[i]] + raw[index[i]+2:]
+	}
+	return raw
+}
+
 var colors = map[string]int{
 	"black":        30,
 	"dark_blue":    34,
