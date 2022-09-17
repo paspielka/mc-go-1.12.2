@@ -54,11 +54,21 @@ func ExtractContent(msg string) (string, string) {
 }
 
 func RawString(raw string) (s string) {
+	// Get rid of all the [97m
+	i := strings.Index(raw, "\u001B[")
+	for i != -1 {
+		raw = raw[:i] + raw[i+8:]
+		i = strings.Index(raw, "\u001B[")
+	}
 	// Get all index of §0
 	var index []int
 	for i := 0; i < len(raw); i++ {
 		if raw[i] == '§' {
 			index = append(index, i+1)
+		}
+		// Check if the string has [000
+		if raw[i] == '' {
+			return raw
 		}
 	}
 	// Remove all §0
