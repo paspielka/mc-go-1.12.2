@@ -21,6 +21,15 @@ type Block struct {
 	Id uint
 }
 
+func (b Block) IsAir() bool {
+	return b.Id == 0
+}
+
+func (b Block) IsSolid() bool {
+	// TODO: add block data
+	return b.Id != 0
+}
+
 type ChunkLoc struct {
 	X, Y int
 }

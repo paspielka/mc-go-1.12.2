@@ -1,6 +1,7 @@
 package PathFinding
 
 import (
+	"fmt"
 	. "github.com/edouard127/mc-go-1.12.2/struct"
 	"math"
 )
@@ -25,36 +26,47 @@ type AStar struct {
 }
 
 // Compute finds the best path from start to end in Minecraft world using A* algorithm like in https://github.com/lambda-plugins/ElytraBot/blob/main/src/main/kotlin/AStar.kt
-func Compute(IStar *AStar) *AStar {
-	// Read the code at https://github.com/lambda-plugins/ElytraBot/blob/main/src/main/kotlin/AStar.kt
-	// for a better understanding of the algorithm
-	// then compare it to this code
+func Compute(IStar *AStar, g *Game) *AStar {
+	for loc, _ := range g.World.Chunks {
+		for x := 0; x < 16; x++ {
+			for y := 0; y < 256; y++ {
+				for z := 0; z < 16; z++ {
+					if !g.GetBlock(x, y, z).IsAir() {
+						fmt.Println(g.GetBlock(x, y, z))
+						IStar.ClosedList = append(IStar.ClosedList, &Node{
+							Position: Vector3{
+								X: float64(loc.X*16 + x),
+								Y: float64(y),
+								Z: float64(loc.Y*16 + z),
+							},
+							Cost: 0,
+						})
+					}
+				}
+			}
+		}
+	}
 	for len(IStar.OpenList) > 0 {
 		// Get the node with the lowest cost
-		var lowestCostNode *Node
-		for _, node := range IStar.OpenList {
-			if lowestCostNode == nil || node.Cost < lowestCostNode.Cost {
-				lowestCostNode = node
+		var currentNode *Node
+		var currentNodeIndex int
+		for i, node := range IStar.OpenList {
+			if currentNode == nil || node.Cost < currentNode.Cost {
+				currentNode = node
+				currentNodeIndex = i
 			}
 		}
 		// Remove the node from the open list
-		for i, node := range IStar.OpenList {
-			if node.Position.X == lowestCostNode.Position.X && node.Position.Y == lowestCostNode.Position.Y && node.Position.Z == lowestCostNode.Position.Z {
-				IStar.OpenList = append(IStar.OpenList[:i], IStar.OpenList[i+1:]...)
-				break
-			}
-		}
+		IStar.OpenList = append(IStar.OpenList[:currentNodeIndex], IStar.OpenList[currentNodeIndex+1:]...)
 		// Add the node to the closed list
-		IStar.ClosedList = append(IStar.ClosedList, lowestCostNode)
+		IStar.ClosedList = append(IStar.ClosedList, currentNode)
 		// Check if the node is the end node
-		if lowestCostNode.Position.X == IStar.End.Position.X && lowestCostNode.Position.Y == IStar.End.Position.Y && lowestCostNode.Position.Z == IStar.End.Position.Z {
-			IStar.Path.Nodes = append(IStar.Path.Nodes, lowestCostNode)
-			IStar.Path.BackTrace()
+		if currentNode.Position.X == IStar.End.Position.X && currentNode.Position.Y == IStar.End.Position.Y && currentNode.Position.Z == IStar.End.Position.Z {
 			IStar.PathFound = true
-			return IStar
+			break
 		}
 		// Get the neighbors of the node
-		neighbors := lowestCostNode.GetNeighbors()
+		neighbors := currentNode.GetNeighbors()
 		for _, neighbor := range neighbors {
 			// Check if the neighbor is in the closed list
 			if IStar.Contains(IStar.ClosedList, neighbor) {
@@ -65,13 +77,26 @@ func Compute(IStar *AStar) *AStar {
 				continue
 			}
 			// Add the neighbor to the open list
-			neighbor.Cost = neighbor.GetCost(IStar.End)
+			neighbor.Cost = currentNode.Cost + 1 + neighbor.GetCost(IStar.End)
 			IStar.OpenList = append(IStar.OpenList, neighbor)
 		}
 		IStar.NodesEvaluated++
 		if IStar.NodesEvaluated > IStar.MaxNodes {
-			return IStar
+			break
 		}
+	}
+	if IStar.PathFound {
+		var currentNode *Node
+		for _, node := range IStar.ClosedList {
+			if node.Position.X == IStar.End.Position.X && node.Position.Y == IStar.End.Position.Y && node.Position.Z == IStar.End.Position.Z {
+				currentNode = node
+				break
+			}
+		}
+		for currentNode != nil {
+			IStar.Path.Nodes = append(IStar.Path.Nodes, currentNode)
+		}
+		IStar.Path.BackTrace()
 	}
 	return IStar
 }
