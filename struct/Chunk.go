@@ -113,7 +113,7 @@ func readChunkColumn(isFull bool, mask int32, data *bytes.Reader, hasSkyLight bo
 		}
 	}
 	if isFull { // Read Biomes Data
-		_, err := pk.ReadNBytes(data, 256*4)
+		_, err := pk.ReadNBytes(data, 256)
 		if err != nil {
 			return nil, fmt.Errorf("read Biomes fail: %v", err)
 		}
