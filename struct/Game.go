@@ -124,8 +124,8 @@ func HandlePack(g *Game, p *pk.Packet) (err error) {
 		// handleDeclareRecipesPacket(g, reader)
 	case 0x27:
 		err = HandleEntityLookAndRelativeMove(g, reader)
-	case 0x28:
-		HandleEntityHeadLookPacket(g, reader)
+	/*case 0x28:
+	HandleEntityHeadLookPacket(g, reader)*/
 	case 0x1F:
 		err = HandleKeepAlivePacket(g, reader)
 	case 0x26:
@@ -151,8 +151,8 @@ func HandlePack(g *Game, p *pk.Packet) (err error) {
 	// 	err = handleSetSlotPacket(g, reader)
 	case 0x4D:
 		err = HandleSoundEffect(g, reader)
-	case 0x3E: // Entity velocity
-		err = HandleEntityVelocity(g, reader)
+	/*case 0x3E: // Entity velocity
+	err = HandleEntityVelocity(g, reader)*/
 	case 0x48: // Title
 		err = HandleTitle(g, reader)
 	default:
@@ -244,7 +244,9 @@ func (g *Game) GetPlayer() *Player {
 	return &g.Player
 }
 func (g *Game) Attack(e *LivingEntity) {
-	SendUseEntityPacket(g, e.ID, 1, e.Position)
+	fmt.Printf("Entity position: %v\n", e.Position)
+	g.LookAt(e.X, e.Y, e.Z)
+	//SendUseEntityPacket(g, e.ID, 1, e.Position)
 }
 func (g *Game) SetPosition(v3 Vector3, onGround bool) {
 	g.Motion <- func() {
@@ -275,17 +277,21 @@ func (g *Game) WalkStraight(dist float64) {
 
 // LookAt method turn player's hand and make it look at a point.
 func (g *Game) LookAt(x, y, z float64) {
-	x0, y0, z0 := g.Player.X, g.Player.Y, g.Player.Z
-	x, y, z = x-x0, y-y0, z-z0
+	g.Motion <- func() {
+		dx := x - g.Player.X
+		dy := y - g.Player.Y
+		dz := z - g.Player.Z
+		r := math.Sqrt(dx*dx + dy*dy + dz*dz)
+		yaw := -math.Atan2(dx, dz) / math.Pi * 180
+		if yaw < 0 {
+			yaw = 360 + yaw
+		}
+		pitch := -math.Asin(dy/r) / math.Pi * 180
+		g.Player.Yaw = float32(yaw)
+		g.Player.Pitch = float32(pitch)
 
-	r := math.Sqrt(x*x + y*y + z*z)
-	yaw := -math.Atan2(x, z) / math.Pi * 180
-	for yaw < 0 {
-		yaw = 360 + yaw
+		SendPlayerLookPacket(g) // Update the location to the server
 	}
-	pitch := -math.Asin(y/r) / math.Pi * 180
-
-	g.LookYawPitch(float32(yaw), float32(pitch))
 }
 
 // LookYawPitch set player's hand to the direct by yaw and pitch.
@@ -293,6 +299,7 @@ func (g *Game) LookAt(x, y, z float64) {
 // if |pitch|>90 the player's hand will be very strange.
 func (g *Game) LookYawPitch(yaw, pitch float32) {
 	g.Motion <- func() {
+		fmt.Printf("yaw: %f, pitch: %f", yaw, pitch)
 		g.Player.Yaw, g.Player.Pitch = yaw, pitch
 		SendPlayerLookPacket(g) // Update the orientation to the server
 	}
@@ -357,15 +364,15 @@ func SendPlayerDiggingPacket(g *Game, status int32, x, y, z int, face Face) {
 	}
 }
 
-func SendPlayerPositionAndLookPacket(g *Game) {
+func SendPlayerPositionAndLookPacket(g *Game, x, y, z float64, yaw, pitch float32, onGround bool) {
 	var data []byte
-	data = append(data, pk.PackDouble(g.Player.X)...)
-	data = append(data, pk.PackDouble(g.Player.Y)...)
-	data = append(data, pk.PackDouble(g.Player.Z)...)
-	data = append(data, pk.PackFloat(g.Player.Yaw)...)
-	data = append(data, pk.PackFloat(g.Player.Pitch)...)
-	data = append(data, pk.PackBoolean(g.Player.OnGround))
-	//fmt.Printf("X:%f Y:%f Z:%f Yaw:%f Pitch:%f OnGround:%t\n", g.player.X, g.player.Y, g.player.Z, g.player.Yaw, g.player.Pitch, g.player.OnGround)
+	data = append(data, pk.PackDouble(x)...)
+	data = append(data, pk.PackDouble(y)...)
+	data = append(data, pk.PackDouble(z)...)
+	data = append(data, pk.PackFloat(yaw)...)
+	data = append(data, pk.PackFloat(pitch)...)
+	data = append(data, pk.PackBoolean(onGround))
+	fmt.Printf("x: %f, y: %f, z: %f, yaw: %f, pitch: %f, onGround: %t", x, y, z, yaw, pitch, onGround)
 
 	g.SendChan <- pk.Packet{
 		ID:   0x0E,
@@ -377,7 +384,6 @@ func SendPlayerLookPacket(g *Game) {
 	data = append(data, pk.PackFloat(g.Player.Yaw)...)
 	data = append(data, pk.PackFloat(g.Player.Pitch)...)
 	data = append(data, pk.PackBoolean(g.Player.OnGround))
-	//fmt.Printf("Yaw:%f Pitch:%f OnGround:%t\n", g.player.Yaw, g.player.Pitch, g.player.OnGround)
 	g.SendChan <- pk.Packet{
 		ID:   0x0F,
 		Data: data,
@@ -392,7 +398,7 @@ func SendPlayerPositionPacket(g *Game) {
 	data = append(data, pk.PackBoolean(g.Player.OnGround))
 
 	g.SendChan <- pk.Packet{
-		ID:   0x10,
+		ID:   0x0D,
 		Data: data,
 	}
 }
@@ -559,32 +565,31 @@ func HandleEntityRelativeMove(g *Game, reader *bytes.Reader) error {
 		return err
 	}
 	entity := g.World.Entities[entityID]
-	if entity == nil {
-		return nil
-	}
-	previous := entity.Position
-	deltaX, err := pk.UnpackInt16(reader)
-	if err != nil {
-		return err
-	}
-	deltaY, err := pk.UnpackInt16(reader)
-	if err != nil {
-		return err
-	}
-	deltaZ, err := pk.UnpackInt16(reader)
-	if err != nil {
-		return err
-	}
-	onGround, err := pk.UnpackBoolean(reader)
-	var delta = Vector3{
-		X: (float64(deltaX)*32 - previous.Y*32) * 128,
-		Y: (float64(deltaY)*32 - previous.Y*32) * 128,
-		Z: (float64(deltaZ)*32 - previous.Z*32) * 128,
-	}
-	entity.SetPosition(previous.Add(delta), onGround)
-	g.Events <- EntityRelativeMoveEvent{
-		EntityID: entityID,
-		Delta:    delta,
+	if entity != nil {
+		previous := entity.Position
+		deltaX, err := pk.UnpackInt16(reader)
+		if err != nil {
+			return err
+		}
+		deltaY, err := pk.UnpackInt16(reader)
+		if err != nil {
+			return err
+		}
+		deltaZ, err := pk.UnpackInt16(reader)
+		if err != nil {
+			return err
+		}
+		onGround, err := pk.UnpackBoolean(reader)
+		var delta = Vector3{
+			X: (float64(deltaX) / 4096),
+			Y: (float64(deltaY) / 4096),
+			Z: (float64(deltaZ) / 4096),
+		}
+		entity.SetPosition(previous.Add(delta), onGround) // TODO: Fix this cause the position is 1.5 blocks different than the actual position
+		g.Events <- EntityRelativeMoveEvent{
+			EntityID: entityID,
+			Delta:    delta,
+		}
 	}
 	return nil
 }
@@ -723,38 +728,9 @@ func HandlePlayerPositionAndLookPacket(g *Game, r *bytes.Reader) error {
 		return err
 	}
 
-	flags, err := r.ReadByte()
-	if err != nil {
-		return err
-	}
-	switch {
-	case flags&0x01 == 0:
-		g.Player.X = x
-	case flags&0x01 == 1:
-		g.Player.X += x
-	case flags&0x02 == 0:
-		g.Player.Y = y
-	case flags&0x02 == 1:
-		g.Player.Y += y
-	case flags&0x04 == 0:
-		g.Player.Z = z
-	case flags&0x04 == 1:
-		g.Player.Z += z
-	case flags&0x08 == 0:
-		g.Player.Yaw = yaw
-	case flags&0x08 == 1:
-		g.Player.Yaw += yaw
-	case flags&0x10 == 0:
-		g.Player.Pitch = pitch
-	case flags&0x10 == 1:
-		g.Player.Pitch += pitch
-	default:
-		panic("invalid flags")
-	}
-
 	TeleportID, _ := pk.UnpackVarInt(r)
 	SendTeleportConfirmPacket(g, TeleportID)
-	SendPlayerPositionAndLookPacket(g)
+	SendPlayerPositionAndLookPacket(g, x, y, z, yaw, pitch, true)
 	return nil
 }
 
@@ -788,18 +764,14 @@ func HandleEntityLookAndRelativeMove(g *Game, r *bytes.Reader) error {
 	return nil
 }
 
-func HandleEntityHeadLookPacket(g *Game, r *bytes.Reader) {
+/*func HandleEntityHeadLookPacket(g *Game, r *bytes.Reader) {
 	ID, _ := pk.UnpackVarInt(r)
-	E := g.World.Entities[ID]
-	if E != nil {
-		yaw, _ := r.ReadByte()
-		pitch, _ := r.ReadByte()
-		E.SetRotation(Vector2{
-			X: float64(yaw),
-			Y: float64(pitch),
-		})
+	yaw, _ := r.ReadByte()
+	e := g.World.Entities[ID]
+	if e != nil {
+
 	}
-}
+}*/
 
 func HandleSetSlotPacket(g *Game, r *bytes.Reader) error {
 	windowID, err := r.ReadByte()
@@ -904,13 +876,16 @@ func HandleSpawnPlayerPacket(g *Game, r *bytes.Reader) (err error) {
 	np.Pitch = float32(pitch) * (1.0 / 256)
 
 	g.World.Entities[np.ID] = &np.LivingEntity // Add the player to the world entities
+	g.World.Entities[np.ID].SetPosition(Vector3{np.X, np.Y, np.Z}, true)
 	return nil
 }
 
 func HandleSpawnPositionPacket(g *Game, r *bytes.Reader) (err error) {
 	g.Info.SpawnPosition.X, g.Info.SpawnPosition.Y, g.Info.SpawnPosition.Z, err =
 		pk.UnpackPosition(r)
-	g.SetPosition(g.Info.SpawnPosition, true) // TODO: Find a better way to do this
+	fmt.Println("Spawn position:", g.Info.SpawnPosition)
+	// TODO: Fix this
+	//g.SetPosition(g.Info.SpawnPosition, true) // TODO: Find a better way to do this
 	return
 }
 
@@ -946,7 +921,7 @@ func HandleUpdateHealthPacket(g *Game, r *bytes.Reader) (err error) {
 
 	if g.Player.Health < 1 { // Player is dead
 		g.Events <- PlayerDeadEvent{} // Dead event
-		SendPlayerPositionAndLookPacket(g)
+		SendPlayerPositionAndLookPacket(g, g.Player.X, g.Player.Y, g.Player.Z, g.Player.Yaw, g.Player.Pitch, true)
 		time.Sleep(time.Second * 2)  // Wait for 2 sec make it more like a human
 		SendClientStatusPacket(g, 0) // Status 0 means perform respawn
 	}
