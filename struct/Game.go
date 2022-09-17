@@ -27,6 +27,7 @@ type Game struct {
 	Settings  Settings
 	Player    Player
 	World     World //the map data
+	Server    Server
 
 	SendChan chan pk.Packet  //be used when HandleGame
 	recvChan chan *pk.Packet //be used when HandleGame
