@@ -39,8 +39,9 @@ func ExtractSenderName(msg string) string {
 			// FInd all the '§' and remove the next character
 			// This is a workaround for the fact that the server sends the message with the color codes
 			i := strings.Index(msg, "§")
-			if i > 0 {
-				msg = msg[:i] + msg[i+2:]
+			for i != -1 {
+				msg = msg[:i] + msg[i:]
+				i = strings.Index(msg, "§")
 			}
 			return msg[1:strings.Index(msg, ">")]
 		}
