@@ -122,6 +122,14 @@ func PackBoolean(b bool) byte {
 	return 0x00
 }
 
+func UnpackBoolean(b io.ByteReader) (bool, error) {
+	bs, err := ReadNBytes(b, 1)
+	if err != nil {
+		return false, err
+	}
+	return bs[0] == 0x01, nil
+}
+
 // ReadNBytes read N bytes from bytes.Reader
 func ReadNBytes(b io.ByteReader, n int) (bs []byte, err error) {
 	bs = make([]byte, n)

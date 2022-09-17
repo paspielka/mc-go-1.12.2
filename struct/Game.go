@@ -104,8 +104,8 @@ func HandlePack(g *Game, p *pk.Packet) (err error) {
 		g.Events <- JoinGameEvent{
 			EntityID: g.Player.ID,
 		}
-	case 0x18:
-		HandlePluginPacket(g, reader)
+	/*case 0x18:
+	HandlePluginPacket(g, reader)*/
 	case 0x0D:
 		err = HandleServerDifficultyPacket(g, reader)
 	case 0x46:
@@ -404,13 +404,13 @@ func SendTeleportConfirmPacket(g *Game, TeleportID int32) {
 	}
 }
 
-func UpdateVelocity(g *Game, entityID int32, velocity Vector3) {
+/*func UpdateVelocity(g *Game, entityID int32, velocity Vector3) {
 	e := g.World.Entities[entityID]
 	if e != nil {
 		panic("UpdateVelocity: entity not found")
 	}
 	(*e).SetPosition((*e).Position.Add(velocity))
-}
+}*/
 
 func SendUseEntityPacket(g *Game, TargetEntityID int32, Type int32, Pos Vector3) {
 	data := pk.PackVarInt(TargetEntityID)
@@ -558,33 +558,33 @@ func HandleEntityRelativeMove(g *Game, reader *bytes.Reader) error {
 	if err != nil {
 		return err
 	}
-	x, err := reader.ReadByte()
-	if err != nil {
-		return err
-	}
-	y, err := reader.ReadByte()
-	if err != nil {
-		return err
-	}
-	z, err := reader.ReadByte()
-	if err != nil {
-		return err
-	}
-	//fmt.Println("EntityRelativeMove", entityID, x, y, z)
 	entity := g.World.Entities[entityID]
 	if entity == nil {
 		return nil
 	}
-	entity.SetPosition(entity.Position.Add(Vector3{
-		X: float64(x) / 32,
-		Y: float64(y) / 32,
-		Z: float64(z) / 32,
-	}))
+	previous := entity.Position
+	deltaX, err := pk.UnpackInt16(reader)
+	if err != nil {
+		return err
+	}
+	deltaY, err := pk.UnpackInt16(reader)
+	if err != nil {
+		return err
+	}
+	deltaZ, err := pk.UnpackInt16(reader)
+	if err != nil {
+		return err
+	}
+	onGround, err := pk.UnpackBoolean(reader)
+	var delta = Vector3{
+		X: (float64(deltaX)*32 - previous.Y*32) * 128,
+		Y: (float64(deltaY)*32 - previous.Y*32) * 128,
+		Z: (float64(deltaZ)*32 - previous.Z*32) * 128,
+	}
+	entity.SetPosition(previous.Add(delta), onGround)
 	g.Events <- EntityRelativeMoveEvent{
 		EntityID: entityID,
-		DeltaX:   float64(x) / 32,
-		DeltaY:   float64(y) / 32,
-		DeltaZ:   float64(z) / 32,
+		Delta:    delta,
 	}
 	return nil
 }
@@ -763,21 +763,8 @@ func HandleEntityLookAndRelativeMove(g *Game, r *bytes.Reader) error {
 	if err != nil {
 		return err
 	}
-	E := g.World.Entities[ID]
-	if E != nil {
-		DeltaX, err := pk.UnpackInt16(r)
-		if err != nil {
-			return err
-		}
-		DeltaY, err := pk.UnpackInt16(r)
-		if err != nil {
-			return err
-		}
-		DeltaZ, err := pk.UnpackInt16(r)
-		if err != nil {
-			return err
-		}
-
+	e := g.World.Entities[ID]
+	if e != nil {
 		yaw, err := r.ReadByte()
 		if err != nil {
 			return err
@@ -788,21 +775,15 @@ func HandleEntityLookAndRelativeMove(g *Game, r *bytes.Reader) error {
 			return err
 		}
 		var rotation = Vector2{
-			X: float64(yaw) * 360 / 256,
-			Y: float64(pitch) * 360 / 256,
+			X: float64(yaw),
+			Y: float64(pitch),
 		}
-		E.SetRotation(rotation)
+		e.SetRotation(rotation)
 
-		og, err := r.ReadByte()
+		err = HandleEntityRelativeMove(g, r)
 		if err != nil {
 			return err
 		}
-		E.OnGround = og != 0x00
-		E.SetPosition(Vector3{
-			X: E.Position.X + float64(DeltaX)/4096,
-			Y: E.Position.Y + float64(DeltaY)/4096,
-			Z: E.Position.Z + float64(DeltaZ)/4096,
-		})
 	}
 	return nil
 }
@@ -818,44 +799,6 @@ func HandleEntityHeadLookPacket(g *Game, r *bytes.Reader) {
 			Y: float64(pitch),
 		})
 	}
-}
-
-func handleEntityRelativeMovePacket(g *Game, r *bytes.Reader) error {
-	ID, err := pk.UnpackVarInt(r)
-	if err != nil {
-		return err
-	}
-	E := g.World.Entities[ID]
-	if E != nil {
-		DeltaX, err := pk.UnpackInt16(r)
-		if err != nil {
-			return err
-		}
-		DeltaY, err := pk.UnpackInt16(r)
-		if err != nil {
-			return err
-		}
-		DeltaZ, err := pk.UnpackInt16(r)
-		if err != nil {
-			return err
-		}
-
-		og, err := r.ReadByte()
-		if err != nil {
-			return err
-		}
-		E.OnGround = og != 0x00
-		E.SetPosition(Vector3{
-			X: E.Position.X + float64(DeltaX)/4096,
-			Y: E.Position.Y + float64(DeltaY)/4096,
-			Z: E.Position.Z + float64(DeltaZ)/4096,
-		})
-	}
-	return nil
-}
-
-func HandlePluginPacket(g *Game, r *bytes.Reader) {
-	// fmt.Println("Plugin Packet: ", p)
 }
 
 func HandleSetSlotPacket(g *Game, r *bytes.Reader) error {
@@ -967,8 +910,7 @@ func HandleSpawnPlayerPacket(g *Game, r *bytes.Reader) (err error) {
 func HandleSpawnPositionPacket(g *Game, r *bytes.Reader) (err error) {
 	g.Info.SpawnPosition.X, g.Info.SpawnPosition.Y, g.Info.SpawnPosition.Z, err =
 		pk.UnpackPosition(r)
-	// Update the player's position
-	g.Player.SetPosition(g.Info.SpawnPosition)
+	g.SetPosition(g.Info.SpawnPosition, true) // TODO: Find a better way to do this
 	return
 }
 
@@ -1159,8 +1101,8 @@ func CalibratePos(g *Game) {
 	x, y, z := p.GetBlockPos()
 	for NonSolid(g.GetBlock(x, y-1, z).String()) {
 		y--
-		g.Player.SetPosition(Vector3{X: float64(x) + 0.5, Y: float64(y), Z: float64(z) + 0.5})
+		g.SetPosition(Vector3{X: float64(x) + 0.5, Y: float64(y), Z: float64(z) + 0.5}, true) // TODO: Find a better way to do this
 		time.Sleep(time.Millisecond * 50)
 	}
-	g.Player.SetPosition(Vector3{X: float64(x) + 0.5, Y: float64(y), Z: float64(z) + 0.5})
+	g.Player.SetPosition(Vector3{X: float64(x) + 0.5, Y: float64(y), Z: float64(z) + 0.5}, true)
 }

@@ -66,9 +66,7 @@ type EntityVelocityEvent struct {
 
 type EntityRelativeMoveEvent struct {
 	EntityID int32
-	DeltaX   float64
-	DeltaY   float64
-	DeltaZ   float64
+	Delta    Vector3
 }
 
 type TickEvent struct{}

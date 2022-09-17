@@ -11,13 +11,15 @@ type LivingEntity struct {
 	OnGround   bool
 }
 
-func (p *LivingEntity) SetPosition(v3 Vector3) {
+func (p *LivingEntity) SetPosition(v3 Vector3, onGround bool) {
+	p.X, p.Y, p.Z = v3.X, v3.Y, v3.Z
 	p.Position = v3
+	p.OnGround = onGround
 }
 
 func (p *LivingEntity) SetRotation(v Vector2) {
-	p.Yaw = float32(v.X)
-	p.Pitch = float32(v.Y)
+	p.Yaw, p.Pitch = float32(v.X), float32(v.Y)
+	p.Rotation = v
 }
 
 // EntityID get player's entity ID.
