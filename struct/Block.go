@@ -13,7 +13,7 @@ var blockStates map[string]struct {
 
 var BlockNameByID []string
 
-func init() {
+func BuildBlockData() {
 	err := json.Unmarshal([]byte(blockStatesJSON), &blockStates)
 	if err != nil {
 		panic(err)
