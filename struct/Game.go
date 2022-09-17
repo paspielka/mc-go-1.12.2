@@ -122,8 +122,8 @@ func HandlePack(g *Game, p *pk.Packet) (err error) {
 		err = HandlePlayerPositionAndLookPacket(g, reader)
 	case 0x54:
 		// handleDeclareRecipesPacket(g, reader)
-	case 0x29:
-		// err = handleEntityLookAndRelativeMove(g, reader)
+	case 0x27:
+		err = HandleEntityLookAndRelativeMove(g, reader)
 	case 0x28:
 		HandleEntityHeadLookPacket(g, reader)
 	case 0x1F:
@@ -721,7 +721,7 @@ func HandlePlayerPositionAndLookPacket(g *Game, r *bytes.Reader) error {
 	return nil
 }
 
-func handleEntityLookAndRelativeMove(g *Game, r *bytes.Reader) error {
+func HandleEntityLookAndRelativeMove(g *Game, r *bytes.Reader) error {
 	ID, err := pk.UnpackVarInt(r)
 	if err != nil {
 		return err
