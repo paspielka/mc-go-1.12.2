@@ -2,7 +2,7 @@
 A golang minecraft robot package.
 
 [![forthebadge made-with-go](http://ForTheBadge.com/images/badges/made-with-go.svg)](https://go.dev/)
-[![GitHub issues](https://img.shields.io/github/issues/Naereen/StrapDown.js.svg)](https://gitHub.com/Edouard127/mc-go-1.12.2/issues/)
+
 
 
 
@@ -35,4 +35,3 @@ A golang minecraft robot package.
 - [ ] Path finding
 
 
-[![Stargazers over time](https://starchart.cc/Naereen/badges.svg)](https://starchart.cc/Naereen/badges)
