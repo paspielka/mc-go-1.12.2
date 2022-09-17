@@ -69,6 +69,13 @@ func (g *Game) HandleGame() error {
 		}
 	}()
 
+	go func() {
+		for {
+			time.Sleep(50 * time.Millisecond)
+			g.Events <- TickEvent{}
+		}
+	}()
+
 	for {
 		select {
 		case err := <-errChan:
@@ -170,14 +177,17 @@ func (g *Game) Dig(x, y, z int) error {
 	SendPlayerDiggingPacket(g, 2, x, y, z, Top) //end
 
 	for {
-		time.Sleep(time.Millisecond * 50)
-		if g.GetBlock(x, y, z).Id != b {
-			break
+		select {
+		case e := <-g.Events:
+			switch e.(type) {
+			case TickEvent:
+				if g.GetBlock(x, y, z).Id != b {
+					break
+				}
+				g.SwingHand(true)
+			}
 		}
-		g.SwingHand(true)
 	}
-
-	return nil
 }
 
 // PlaceBlock place a block in the position and wait
@@ -186,14 +196,17 @@ func (g *Game) PlaceBlock(x, y, z int, face Face) error {
 	SendPlayerBlockPlacementPacket(g, x, y, z, face, 0, 0, 0, 0)
 
 	for {
-		time.Sleep(time.Millisecond * 50)
-		if g.GetBlock(x, y, z).Id != b {
-			break
+		select {
+		case e := <-g.Events:
+			switch e.(type) {
+			case TickEvent:
+				if g.GetBlock(x, y, z).Id != b {
+					break
+				}
+				g.SwingHand(true)
+			}
 		}
-		g.SwingHand(true)
 	}
-
-	return nil
 }
 
 // Chat send chat message to server
