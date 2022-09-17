@@ -453,7 +453,7 @@ func HandleChatMessagePacket(g *Game, r *bytes.Reader) error {
 	if err != nil {
 		return err
 	}
-	sender, content := ExtractContent(cm.Text)
+	sender, content := ExtractContent(cm.String())
 	timestamp := time.Now().UnixMilli()
 	g.Events <- ChatMessageEvent{Content: content, Sender: sender, Timestamp: timestamp, Position: pos}
 
