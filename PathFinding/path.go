@@ -1,8 +1,12 @@
 package PathFinding
 
+import (
+	. "github.com/edouard127/mc-go-1.12.2/struct"
+)
+
 type Node struct {
-	X, Y, Z int
-	Cost    int
+	Position Vector3
+	Cost     int
 }
 
 type Path struct {

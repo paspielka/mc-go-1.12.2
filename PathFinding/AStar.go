@@ -1,6 +1,9 @@
 package PathFinding
 
-import "math"
+import (
+	. "github.com/edouard127/mc-go-1.12.2/struct"
+	"math"
+)
 
 var IStar *AStar
 
@@ -34,7 +37,7 @@ func Compute(ch chan bool) {
 				current = node
 			}
 		}
-		if current.X == IStar.End.X && current.Y == IStar.End.Y && current.Z == IStar.End.Z {
+		if current.Position.DistanceTo(IStar.End.Position) < 1 {
 			IStar.PathFound = true
 			break
 		}
@@ -70,54 +73,20 @@ func NewAStar(start, end *Node) *AStar {
 
 func (n *Node) GetNeighbors() []*Node {
 	var neighbors []*Node
-	if n.X > 0 {
-		neighbors = append(neighbors, &Node{
-			X: n.X - 1,
-			Y: n.Y,
-			Z: n.Z,
-		})
-	}
-	if n.X < 255 {
-		neighbors = append(neighbors, &Node{
-			X: n.X + 1,
-			Y: n.Y,
-			Z: n.Z,
-		})
-	}
-	if n.Y > 0 {
-		neighbors = append(neighbors, &Node{
-			X: n.X,
-			Y: n.Y - 1,
-			Z: n.Z,
-		})
-	}
-	if n.Y < 255 {
-		neighbors = append(neighbors, &Node{
-			X: n.X,
-			Y: n.Y + 1,
-			Z: n.Z,
-		})
-	}
-	if n.Z > 0 {
-		neighbors = append(neighbors, &Node{
-			X: n.X,
-			Y: n.Y,
-			Z: n.Z - 1,
-		})
-	}
-	if n.Z < 255 {
-		neighbors = append(neighbors, &Node{
-			X: n.X,
-			Y: n.Y,
-			Z: n.Z + 1,
-		})
+	for _, axis := range []float64{n.Position.X, n.Position.Y, n.Position.Z} {
+		if axis > 0 {
+			neighbors = append(neighbors, &Node{Position: Vector3{axis - 1, n.Position.Y, n.Position.Z}})
+		}
+		if axis < 100 {
+			neighbors = append(neighbors, &Node{Position: Vector3{axis + 1, n.Position.Y, n.Position.Z}})
+		}
 	}
 	return neighbors
 }
 
 func (a *AStar) Contains(nodes []*Node, node *Node) bool {
 	for _, n := range nodes {
-		if n.X == node.X && n.Y == node.Y && n.Z == node.Z {
+		if n.Position.X == node.Position.X && n.Position.Y == node.Position.Y && n.Position.Z == node.Position.Z {
 			return true
 		}
 	}
@@ -125,5 +94,5 @@ func (a *AStar) Contains(nodes []*Node, node *Node) bool {
 }
 
 func (n *Node) GetCost(end *Node) int {
-	return int(math.Abs(float64(n.X-end.X)) + math.Abs(float64(n.Y-end.Y)) + math.Abs(float64(n.Z-end.Z)))
+	return int(math.Abs(n.Position.X-end.Position.X) + math.Abs(n.Position.Y-end.Position.Y) + math.Abs(n.Position.Z-end.Position.Z))
 }
