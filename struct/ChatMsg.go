@@ -36,7 +36,18 @@ func NewChatMsg(jsonMsg []byte) (jc ChatMsg, err error) {
 func ExtractSenderName(msg string) string {
 	if len(msg) > 0 {
 		if msg[0] == '<' {
-			msg = strings.Replace(msg, "§0", "", -1)
+
+			// This is a workaround for the fact that the server sends the message with the color codes
+			var i []int
+			for j, c := range msg {
+				if c == '§' {
+					i = append(i, j)
+				}
+			}
+			for j := len(i) - 1; j >= 0; j-- {
+				msg = msg[:i[j]] + msg[i[j]+2:]
+			}
+
 			return msg[1:strings.Index(msg, ">")]
 		}
 	}
@@ -45,7 +56,6 @@ func ExtractSenderName(msg string) string {
 func ExtractContent(msg string) (string, string) {
 	if len(msg) > 0 {
 		if msg[0] == '<' {
-			msg = strings.Replace(msg, "§0", "", -1)
 			s := ExtractSenderName(msg)
 			return s, msg[len(s)+1:]
 		}
