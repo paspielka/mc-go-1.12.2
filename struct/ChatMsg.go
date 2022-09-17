@@ -40,8 +40,8 @@ func ExtractSenderName(msg string) string {
 	return ""
 }
 func ExtractContent(msg string) (string, string) {
-	msg = strings.Replace(msg, "§0", "", -1)
 	if msg[0] == '<' {
+		msg = strings.Replace(msg, "§0", "", -1)
 		s := ExtractSenderName(msg)
 		return s, msg[len(s)+2:]
 	}
