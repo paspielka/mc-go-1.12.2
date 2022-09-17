@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/edouard127/mc-go-1.12.2/locales"
+	"strings"
 )
 
 // ChatMsg is a message sent by other
@@ -31,6 +32,20 @@ func NewChatMsg(jsonMsg []byte) (jc ChatMsg, err error) {
 		err = json.Unmarshal(jsonMsg, &jc)
 	}
 	return
+}
+func ExtractSenderName(msg string) string {
+	if msg[0] == '<' {
+		return msg[1:strings.Index(msg, ">")]
+	}
+	return ""
+}
+func ExtractContent(msg string) (string, string) {
+	msg = strings.Replace(msg, "§0", "", -1)
+	if msg[0] == '<' {
+		s := ExtractSenderName(msg)
+		return s, msg[len(s)+2:]
+	}
+	return "", msg
 }
 
 var colors = map[string]int{

@@ -155,7 +155,7 @@ func UnpackVarInt(b io.ByteReader) (int32, error) {
 			return 0, err
 		}
 
-		n |= (uint(sec&0x7F) << uint(7*i))
+		n |= uint(sec&0x7F) << uint(7*i)
 
 		if sec&0x80 == 0 {
 			break

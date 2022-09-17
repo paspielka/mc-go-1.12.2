@@ -35,8 +35,10 @@ type BlockChangeEvent struct{}
 // When it's 1, this is a system message and also at chat box,
 // if 2, it's a game info which displayed above hot bar.
 type ChatMessageEvent struct {
-	Msg ChatMsg
-	Pos byte
+	Content   string
+	Sender    string
+	Timestamp int64
+	Position  byte
 }
 
 type TitleEvent struct {
