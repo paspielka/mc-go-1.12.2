@@ -517,7 +517,7 @@ func HandleEntityVelocity(g *Game, reader *bytes.Reader) error {
 		EntityID: entityID,
 		Velocity: velocity,
 	}
-	UpdateVelocity(g, entityID, velocity)
+	//UpdateVelocity(g, entityID, velocity)
 	return nil
 }
 
