@@ -365,12 +365,9 @@ func (g *Game) Attack(e *LivingEntity) {
 	//SendUseEntityPacket(g, e.ID, 1, e.Position)
 }
 func (g *Game) SetPosition(v3 Vector3, onGround bool) {
-	g.Motion <- func() {
-		g.GetPlayer().Position = v3
-		g.GetPlayer().X, g.GetPlayer().Y, g.GetPlayer().Z = v3.X, v3.Y, v3.Z
-		g.GetPlayer().OnGround = onGround
-		SendPlayerPositionPacket(g) // Update the location to the server
-	}
+	g.GetPlayer().SetPosition(v3, onGround)
+	g.GetPlayer().X, g.GetPlayer().Y, g.GetPlayer().Z = v3.X, v3.Y, v3.Z
+	SendPlayerPositionPacket(g) // Update the location to the server
 }
 
 func (g *Game) ClosestEntity(r float64) *LivingEntity {
@@ -1177,7 +1174,7 @@ func similar(a, b float64) bool {
 }
 
 // TweenJump simulate player jump make no headway
-func TweenJump(g *Game) {
+func (g *Game) TweenJump() {
 	p := g.GetPlayer()
 	y := math.Floor(p.Y)
 	for tick := 0; tick < 11; tick++ {
