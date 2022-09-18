@@ -146,9 +146,7 @@ func HandlePack(g *Game, p *pk.Packet) (err error) {
 		err = HandleMultiBlockChangePacket(g, reader)
 		g.Events <- BlockChangeEvent{}
 	case 0x1A:
-		// Should assume that the server has already closed the connection by the time the packet arrives.
-		g.Events <- DisconnectEvent{Text: "disconnect"}
-		err = fmt.Errorf("disconnect")
+		err = HandleDisconnect(g, reader)
 	case 0x17:
 	// 	err = handleSetSlotPacket(g, reader)
 	case 0x49:
@@ -586,7 +584,7 @@ func HandleBlockChangePacket(g *Game, r *bytes.Reader) error {
 		if err != nil {
 			return err
 		}
-		c.Sections[int(y)/16].Blocks[int(x)&15][int(y)&15][int(z)&15] = Block{Id: uint(id)}
+		c.Sections[int(y)&15].Blocks[int(x)&15][int(y)&15][int(z)&15] = Block{Id: uint(id)}
 	}
 
 	return nil
