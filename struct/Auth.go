@@ -17,6 +17,7 @@ import (
 	"net"
 	"net/http"
 	"strings"
+	"sync"
 )
 
 // Auth includes a account
@@ -24,6 +25,60 @@ type Auth struct {
 	Name string
 	UUID string
 	AsTk string
+}
+
+func (p *Auth) PingServer(addr string, port int, wg *sync.WaitGroup) (err error) {
+
+	defer func() {
+		wg.Done()
+	}()
+	// Connection
+	g := new(Game)
+	g.Conn, err = net.Dial("tcp", fmt.Sprintf("%s:%d", addr, port))
+	if err != nil {
+		err = fmt.Errorf("cannot connect the server %q: %v", addr, err)
+		return
+	}
+
+	//init Game
+	g.Receiver = bufio.NewReader(g.Conn)
+	g.Sender = g.Conn
+
+	// Handshake
+	hsPacket := NewHandshakePacket(340, addr, port, 1) // Constructing handshake packets
+	err = g.SendPacket(hsPacket)
+	if err != nil {
+		err = fmt.Errorf("send handshake packect fail: %v", err)
+		return
+	}
+
+	// Login
+	lsPacket := newLoginStartPacket(p.Name)
+	err = g.SendPacket(lsPacket) //LoginStart
+	if err != nil {
+		err = fmt.Errorf("send login start packect fail: %v", err)
+		return
+	}
+	for {
+		//Receive Packet
+		var pack *pk.Packet
+		pack, err = g.recvPacket()
+		if err != nil {
+			err = fmt.Errorf("recv packet at state Login fail: %v\nWe are going to ignore this error\n", err)
+			return
+		}
+
+		//Handle Packet
+		switch pack.ID {
+		case 0x00: // Status reponse
+			fmt.Printf("Status reponse: %s", string(pack.Data))
+			return
+		default:
+			err = fmt.Errorf("unknown packet ID %d at state Login\n", pack.ID)
+			return
+		}
+		return
+	}
 }
 
 // JoinServer connect a Minecraft server.
@@ -57,9 +112,6 @@ func (p *Auth) JoinServer(addr string, port int) (g *Game, err error) {
 		return
 	}
 
-	// Ping
-	pingPacket := PingPacket()
-	err := g.SendPacket(ping)
 	if err != nil {
 		err = fmt.Errorf("send ping packect fail: %v", err)
 		return
@@ -276,7 +328,7 @@ func GenEncryptionKeyResponse(shareSecret, publicKey, verifyToken []byte) (erp *
 }
 
 func PingPacket() (Ping *pk.Packet) {
-	Ping = pk.Packet{
+	Ping = &pk.Packet{
 		ID:   0xFE,
 		Data: []byte{0x01},
 	}
