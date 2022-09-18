@@ -4,10 +4,15 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
+	. "github.com/edouard127/mc-go-1.12.2/data"
+	. "github.com/edouard127/mc-go-1.12.2/data/World"
+	. "github.com/edouard127/mc-go-1.12.2/data/entities"
+	. "github.com/edouard127/mc-go-1.12.2/maths"
 	pk "github.com/edouard127/mc-go-1.12.2/packet"
 	. "github.com/edouard127/mc-go-1.12.2/util"
 	"io"
 	"math"
+	"math/rand"
 	"net"
 	"time"
 )
@@ -38,71 +43,70 @@ type Game struct {
 // HandleGame receive server packet and response them correctly.
 // Note that HandleGame will block if you don't receive from Events.
 func (g *Game) HandleGame() error {
-	defer func() {
-		close(g.Events)
-	}()
-
-	errChan := make(chan error)
-
-	g.SendChan = make(chan pk.Packet, 64)
 	go func() {
-		for p := range g.SendChan {
-			err := g.SendPacket(&p)
-			if err != nil {
-				errChan <- fmt.Errorf("send packet in game fail: %v", err)
-				return
+		defer func() {
+			close(g.Events)
+		}()
+
+		errChan := make(chan error)
+
+		g.SendChan = make(chan pk.Packet, 64)
+		go func() {
+			for p := range g.SendChan {
+				err := g.SendPacket(&p)
+				if err != nil {
+					errChan <- fmt.Errorf("send packet in game fail: %v", err)
+					return
+				}
 			}
-		}
-	}()
+		}()
 
-	g.recvChan = make(chan *pk.Packet, 64)
-	go func() {
+		g.recvChan = make(chan *pk.Packet, 64)
+		go func() {
+			for {
+				pack, err := g.recvPacket()
+				if err != nil {
+					close(g.recvChan)
+					errChan <- fmt.Errorf("recv packet in game fail: %v", err)
+					return
+				}
+
+				g.recvChan <- pack
+			}
+		}()
 		for {
-			pack, err := g.recvPacket()
-			if err != nil {
-				close(g.recvChan)
-				errChan <- fmt.Errorf("recv packet in game fail: %v", err)
-				return
+			select {
+			case err := <-errChan:
+				fmt.Printf("error: %v\n", err)
+				close(g.SendChan)
+			case pack, ok := <-g.recvChan:
+				if !ok {
+					panic(fmt.Sprintf("packet %v is not ok", pack))
+					break
+				}
+				err := HandlePack(g, pack)
+				if err != nil {
+					panic(fmt.Errorf("handle packet 0x%X error: %v", pack, err))
+				}
+			case f := <-g.Motion:
+				fmt.Printf("recv motion\n")
+				go f()
 			}
-
-			g.recvChan <- pack
 		}
 	}()
-
-	go func() {
-		for {
-			time.Sleep(50 * time.Millisecond)
-			g.Events <- TickEvent{}
-		}
-	}()
-
-	for {
-		select {
-		case err := <-errChan:
-			close(g.SendChan)
-			return err
-		case pack, ok := <-g.recvChan:
-			if !ok {
-				break
-			}
-			err := HandlePack(g, pack)
-			if err != nil {
-				return fmt.Errorf("handle packet 0x%X error: %v", pack, err)
-			}
-		case motion := <-g.Motion:
-			motion()
-		}
-	}
+	return nil
 }
 func HandlePack(g *Game, p *pk.Packet) (err error) {
-	//fmt.Printf("recv packet 0x%X\n", p.ID)
+	fmt.Printf("recv packet 0x%X\n", p.ID)
 	reader := bytes.NewReader(p.Data)
 
 	switch p.ID {
+	case 0x00: // Spawn Object
+		HandleSpawnObject(g, reader)
 	case 0x23:
 		err = HandleJoinGamePacket(g, reader)
 		g.Events <- JoinGameEvent{
-			EntityID: g.Player.ID,
+			EntityID: g.Player.EntityID(),
 		}
 	case 0x25:
 
@@ -168,9 +172,27 @@ func HandlePack(g *Game, p *pk.Packet) (err error) {
 	case 0x3C: // Entity Metadata
 		err = HandleEntityMetadata(g, reader)
 	default:
-		//fmt.Printf("unhandled packet 0x%1X\n", p.ID)
+		fmt.Printf("unhandled packet 0x%1X\n", p.ID)
 	}
-	return
+	return nil
+}
+
+func HandleSpawnObject(g *Game, reader *bytes.Reader) {
+	object := CreateObject{}
+	object.EntityID, _ = pk.UnpackVarInt(reader)
+	object.ObjectID[0], _ = pk.UnpackInt64(reader)
+	object.ObjectID[1], _ = pk.UnpackInt64(reader)
+	object.TypeID, _ = pk.UnpackByte(reader)
+	object.X, _ = pk.UnpackDouble(reader)
+	object.Y, _ = pk.UnpackDouble(reader)
+	object.Z, _ = pk.UnpackDouble(reader)
+	object.Pitch, _ = pk.UnpackDouble(reader)
+	object.Yaw, _ = pk.UnpackDouble(reader)
+	object.Data, _ = pk.UnpackInt8(reader)
+	object.VelX, _ = pk.UnpackDouble(reader)
+	object.VelY, _ = pk.UnpackDouble(reader)
+	object.VelZ, _ = pk.UnpackDouble(reader)
+	g.World.CreateEntity(object)
 }
 
 func HandleDisconnect(g *Game, reader *bytes.Reader) error {
@@ -239,34 +261,13 @@ func HandleDestroyEntity(g *Game, reader *bytes.Reader) error {
 }
 
 func HandleEntityTeleport(g *Game, reader *bytes.Reader) error {
-	entityID, err := pk.UnpackVarInt(reader)
-	if err != nil {
-		return err
-	}
-	x, err := pk.UnpackDouble(reader)
-	if err != nil {
-		return err
-	}
-	y, err := pk.UnpackDouble(reader)
-	if err != nil {
-		return err
-	}
-	z, err := pk.UnpackDouble(reader)
-	if err != nil {
-		return err
-	}
-	yaw, err := pk.UnpackFloat(reader)
-	if err != nil {
-		return err
-	}
-	pitch, err := pk.UnpackFloat(reader)
-	if err != nil {
-		return err
-	}
-	onGround, err := pk.UnpackBoolean(reader)
-	if err != nil {
-		return err
-	}
+	entityID, _ := pk.UnpackVarInt(reader)
+	x, _ := pk.UnpackDouble(reader)
+	y, _ := pk.UnpackDouble(reader)
+	z, _ := pk.UnpackDouble(reader)
+	yaw, _ := pk.UnpackFloat(reader)
+	pitch, _ := pk.UnpackFloat(reader)
+	onGround, _ := pk.UnpackBoolean(reader)
 	entity, ok := g.World.Entities[entityID]
 	if !ok {
 		return fmt.Errorf("entity not found")
@@ -281,7 +282,7 @@ func HandleEntityTeleport(g *Game, reader *bytes.Reader) error {
 		Y: float64(pitch),
 	}
 	entity.SetPosition(position, onGround)
-	entity.SetRotation(rotation)
+	entity.SetRotation(rotation, onGround)
 	return nil
 }
 
@@ -296,17 +297,23 @@ func (g *Game) SendPacket(p *pk.Packet) error {
 }
 
 // Dig a block in the position and wait
-func (g *Game) Dig(x, y, z int) error {
-	b := g.GetBlock(x, y, z).Id
-	SendPlayerDiggingPacket(g, 0, x, y, z, Top) //start
-	SendPlayerDiggingPacket(g, 2, x, y, z, Top) //end
+func (g *Game) Dig(v3 Vector3) error {
+	b := g.GetBlock(v3)
+	if b.IsAir() {
+		return fmt.Errorf("block is air")
+	}
+	g.Events <- DigStartEvent{Block: b}
+	SendPlayerDiggingPacket(g, 0, v3, Top) //start
+	time.Sleep(100 * time.Millisecond)
+	g.Events <- DigStopEvent{Block: b}
+	SendPlayerDiggingPacket(g, 2, v3, Top) //finish
 
 	for {
 		select {
 		case e := <-g.Events:
 			switch e.(type) {
 			case TickEvent:
-				if g.GetBlock(x, y, z).Id != b {
+				if g.GetBlock(v3) != b {
 					break
 				}
 				g.SwingHand(true)
@@ -316,16 +323,16 @@ func (g *Game) Dig(x, y, z int) error {
 }
 
 // PlaceBlock place a block in the position and wait
-func (g *Game) PlaceBlock(x, y, z int, face Face) error {
-	b := g.GetBlock(x, y, z).Id
-	SendPlayerBlockPlacementPacket(g, x, y, z, face, 0, 0, 0, 0)
+func (g *Game) PlaceBlock(v3 Vector3, face Face) error {
+	b := g.GetBlock(v3).Id
+	SendPlayerBlockPlacementPacket(g, v3, face, 0, 0, 0, 0)
 
 	for {
 		select {
 		case e := <-g.Events:
 			switch e.(type) {
 			case TickEvent:
-				if g.GetBlock(x, y, z).Id != b {
+				if g.GetBlock(v3).Id != b {
 					break
 				}
 				g.SwingHand(true)
@@ -353,11 +360,11 @@ func (g *Game) Chat(msg string) error {
 }
 
 // GetBlock return the block at (x, y, z)
-func (g *Game) GetBlock(x, y, z int) Block {
+func (g *Game) GetBlock(v3 Vector3) Block {
 	bc := make(chan Block)
 
 	g.Motion <- func() {
-		bc <- g.World.GetBlock(x, y, z)
+		bc <- g.World.GetBlock(v3)
 	}
 
 	return <-bc
@@ -367,8 +374,8 @@ func (g *Game) GetBlock(x, y, z int) Block {
 func (g *Game) GetPlayer() *Player {
 	return &g.Player
 }
-func (g *Game) Attack(e *LivingEntity) {
-	//g.LookAt(e.X, e.Y, e.Z)
+func (g *Game) Attack(e *Entity) {
+	g.LookAt(e.Position)
 	g.SwingHand(true)
 	SendUseEntityPacket(g, e.ID, 1, e.Position)
 }
@@ -379,47 +386,47 @@ func (g *Game) Eat() {
 }
 
 func (g *Game) SetPosition(v3 Vector3, onGround bool) {
-	g.GetPlayer().SetPosition(v3, onGround)
-	g.GetPlayer().X, g.GetPlayer().Y, g.GetPlayer().Z = v3.X, v3.Y, v3.Z
+	g.Player.SetPosition(v3, onGround)
 	SendPlayerPositionPacket(g) // Update the location to the server
 }
 
-func (g *Game) ClosestEntity(r float64) *LivingEntity {
+func (g *Game) SetSpawnPosition(v3 Vector3) {
+	g.Info.SetSpawnPosition(v3)
+	g.SetPosition(v3, true)
+}
+
+func (g *Game) ClosestEntity(r float64) *Entity {
 	return g.World.ClosestEntity(g.GetPlayer().Position, r)
 }
 
 func (g *Game) WalkTo(x, y, z float64) {
 	g.Motion <- func() {
-		g.Player.X, g.Player.Y, g.Player.Z = x, y, z
 		SendPlayerPositionPacket(g) // Update the location to the server
 	}
 }
 
 func (g *Game) WalkStraight(dist float64) {
 	g.Motion <- func() {
-		g.Player.X += dist * math.Sin(float64(g.Player.Yaw))
-		g.Player.Z += dist * math.Cos(float64(g.Player.Yaw))
+		g.Player.Position.X += dist * math.Sin(g.Player.Rotation.X)
+		g.Player.Position.Z += dist * math.Cos(g.Player.Rotation.X)
 		SendPlayerPositionPacket(g) // Update the location to the server
 	}
 }
 
 // LookAt method turn player's hand and make it look at a point.
-func (g *Game) LookAt(x, y, z float64) {
+func (g *Game) LookAt(v3 Vector3) {
 	g.Motion <- func() {
-		dx := x - g.Player.X
-		dy := y - g.Player.Y
-		dz := z - g.Player.Z
+		dx := v3.X - g.Player.Position.X
+		dy := v3.Y - g.Player.Position.Y
+		dz := v3.Z - g.Player.Position.Z
 		r := math.Sqrt(dx*dx + dy*dy + dz*dz)
 		yaw := -math.Atan2(dx, dz) / math.Pi * 180
 		if yaw < 0 {
 			yaw = 360 + yaw
 		}
 		pitch := -math.Asin(dy/r) / math.Pi * 180
-		g.GetPlayer().Yaw, g.GetPlayer().Pitch = float32(yaw), float32(pitch)
-		g.GetPlayer().SetRotation(Vector2{
-			X: float64(yaw),
-			Y: float64(pitch),
-		})
+		g.Player.Rotation.X, g.Player.Rotation.Y = yaw, pitch
+		g.Player.SetRotation(Vector2{X: yaw, Y: pitch}, true)
 
 		SendPlayerLookPacket(g, float32(yaw), float32(pitch), true) // Update the location to the server
 	}
@@ -429,10 +436,8 @@ func (g *Game) LookAt(x, y, z float64) {
 // yaw can be [0, 360) and pitch can be (-180, 180).
 // if |pitch|>90 the player's hand will be very strange.
 func (g *Game) LookYawPitch(yaw, pitch float32) {
-	g.Motion <- func() {
-		g.GetPlayer().Yaw, g.GetPlayer().Pitch = yaw, pitch
-		SendPlayerLookPacket(g, yaw, pitch, true) // Update the orientation to the server
-	}
+	g.Player.Rotation.X, g.Player.Rotation.Y = float64(yaw), float64(pitch)
+	SendPlayerLookPacket(g, yaw, pitch, true) // Update the orientation to the server
 }
 
 // SwingHand sent when the player's arm swings.
@@ -469,9 +474,9 @@ func SendKeepAlivePacket(g *Game, KeepAliveID int64) {
 	}
 }
 
-func SendPlayerBlockPlacementPacket(g *Game, x int, y int, z int, face Face, i int, i2 int, i3 int, i4 int) {
+func SendPlayerBlockPlacementPacket(g *Game, v3 Vector3, face Face, i int, i2 int, i3 int, i4 int) {
 	var data []byte
-	data = append(data, pk.PackPosition(x, y, z)...)
+	data = append(data, pk.PackPosition(v3)...)
 	data = append(data, pk.PackVarInt(int32(face))...)
 	data = append(data, pk.PackVarInt(int32(i))...)
 	data = append(data, pk.PackVarInt(int32(i2))...)
@@ -483,9 +488,9 @@ func SendPlayerBlockPlacementPacket(g *Game, x int, y int, z int, face Face, i i
 	}
 }
 
-func SendPlayerDiggingPacket(g *Game, status int32, x, y, z int, face Face) {
+func SendPlayerDiggingPacket(g *Game, status int32, v3 Vector3, face Face) {
 	data := pk.PackVarInt(status)
-	data = append(data, pk.PackPosition(x, y, z)...)
+	data = append(data, pk.PackPosition(v3)...)
 	data = append(data, byte(face))
 
 	g.SendChan <- pk.Packet{
@@ -494,36 +499,32 @@ func SendPlayerDiggingPacket(g *Game, status int32, x, y, z int, face Face) {
 	}
 }
 
-func SendPlayerPositionAndLookPacket(g *Game, x, y, z float64, yaw, pitch float32, onGround bool) {
+func SendPlayerPositionAndLookPacket(g *Game, v3 Vector3, v2 Vector2, onGround bool) {
 	var data []byte
-	data = append(data, pk.PackDouble(x)...)
-	data = append(data, pk.PackDouble(y)...)
-	data = append(data, pk.PackDouble(z)...)
-	data = append(data, pk.PackFloat(yaw)...)
-	data = append(data, pk.PackFloat(pitch)...)
+	data = append(data, pk.PackPosition(v3)...)
+	data = append(data, pk.PackRotation(v2)...)
 	data = append(data, pk.PackBoolean(onGround))
-
 	g.SendChan <- pk.Packet{
 		ID:   0x0E,
 		Data: data,
 	}
 }
 func SendPlayerLookPacket(g *Game, yaw, pitch float32, onGround bool) {
-	var data []byte
-	data = append(data, pk.PackFloat(yaw)...)
-	data = append(data, pk.PackFloat(pitch)...)
-	data = append(data, pk.PackBoolean(onGround))
-	g.SendChan <- pk.Packet{
-		ID:   0x0F,
-		Data: data,
+	g.Motion <- func() {
+		var data []byte
+		data = append(data, pk.PackFloat(yaw)...)
+		data = append(data, pk.PackFloat(pitch)...)
+		data = append(data, pk.PackBoolean(onGround))
+		g.SendChan <- pk.Packet{
+			ID:   0x0F,
+			Data: data,
+		}
 	}
 }
 
 func SendPlayerPositionPacket(g *Game) {
 	var data []byte
-	data = append(data, pk.PackDouble(g.Player.X)...)
-	data = append(data, pk.PackDouble(g.Player.Y)...)
-	data = append(data, pk.PackDouble(g.Player.Z)...)
+	data = append(data, pk.PackPosition(g.Player.Position)...)
 	data = append(data, pk.PackBoolean(g.Player.OnGround))
 
 	g.SendChan <- pk.Packet{
@@ -540,9 +541,11 @@ func SendTeleportConfirmPacket(g *Game, TeleportID int32) {
 }
 
 func UpdateVelocity(g *Game, entityID int32, velocity Vector3) {
-	e := g.World.Entities[entityID]
-	if e != nil {
-		e.SetPosition(e.Position.Add(velocity), true)
+	g.Motion <- func() {
+		e := g.World.Entities[entityID]
+		if e != nil {
+			e.SetPosition(e.Position.Add(velocity), true)
+		}
 	}
 }
 
@@ -550,7 +553,7 @@ func SendUseEntityPacket(g *Game, TargetEntityID int32, Type int32, Pos Vector3)
 	data := pk.PackVarInt(TargetEntityID)
 	data = append(data, pk.PackVarInt(Type)...)
 	if Type == 2 {
-		data = append(data, PackVector3(Pos)...)
+		data = append(data, pk.PackPosition(Pos)...)
 	}
 	g.SendChan <- pk.Packet{
 		ID:   0x0A,
@@ -590,17 +593,17 @@ func HandleBlockChangePacket(g *Game, r *bytes.Reader) error {
 	if !g.Settings.ReciveMap {
 		return nil
 	}
-	x, y, z, err := pk.UnpackPosition(r)
+	v3, err := pk.UnpackPosition(r)
 	if err != nil {
 		return err
 	}
-	c := g.World.Chunks[ChunkLoc{X: int(x) >> 4, Y: int(z) >> 4}]
+	c := g.World.Chunks[ChunkLoc{X: int(v3.X) >> 4, Y: int(v3.Z) >> 4}]
 	if c != nil {
 		id, err := pk.UnpackVarInt(r)
 		if err != nil {
 			return err
 		}
-		c.Sections[int(y)&15].Blocks[int(x)&15][int(y)&15][int(z)&15] = Block{Id: uint(id)}
+		c.Sections[int(v3.Y)&15].Blocks[int(v3.X)&15][int(v3.Y)&15][int(v3.Z)&15] = Block{Id: uint(id)}
 	}
 
 	return nil
@@ -624,7 +627,6 @@ func HandleChatMessagePacket(g *Game, r *bytes.Reader) error {
 	raw := fmt.Sprintf("%s%s", sender, content)
 	timestamp := time.Now().UnixMilli()
 	g.Events <- ChatMessageEvent{Content: content, Sender: sender, RawString: RawString(raw), Timestamp: timestamp, Position: pos}
-
 	return nil
 }
 
@@ -652,17 +654,6 @@ func handleDeclareRecipesPacket(g *Game, r *bytes.Reader) {
 		 }*/
 }
 
-func HandleEntity(g *Game, r *bytes.Reader) error {
-	entityID, err := pk.UnpackVarInt(r)
-	if err != nil {
-		return err
-	}
-	if !g.World.HasEntity(entityID) {
-		g.World.CreateEntity(entityID)
-	}
-	return nil
-}
-
 func HandleEntityHeadLook(g *Game, reader *bytes.Reader) error {
 	entityID, err := pk.UnpackVarInt(reader)
 	if err != nil {
@@ -674,9 +665,7 @@ func HandleEntityHeadLook(g *Game, reader *bytes.Reader) error {
 	}
 	e := g.World.Entities[entityID]
 	if e != nil {
-		e.Yaw = float32(yaw)
-	} else {
-		g.World.CreateEntity(entityID)
+		e.SetYaw(float32(yaw) * 360 / 256)
 	}
 	return nil
 }
@@ -733,9 +722,9 @@ func HandleEntityRelativeMove(g *Game, reader *bytes.Reader) error {
 		}
 		onGround, err := pk.UnpackBoolean(reader)
 		var delta = Vector3{
-			X: (float64(deltaX) / 4096),
-			Y: (float64(deltaY) / 4096),
-			Z: (float64(deltaZ) / 4096),
+			X: float64(deltaX) / 4096,
+			Y: float64(deltaY) / 4096,
+			Z: float64(deltaZ) / 4096,
 		}
 		entity.SetPosition(previous.Add(delta), onGround) // TODO: Fix this cause the position is 1.5 blocks different than the actual position
 		g.Events <- EntityRelativeMoveEvent{
@@ -859,30 +848,17 @@ func HandlePlayerAbilitiesPacket(g *Game, r *bytes.Reader) error {
 }
 
 func HandlePlayerPositionAndLookPacket(g *Game, r *bytes.Reader) error {
-	x, err := pk.UnpackDouble(r)
-	if err != nil {
-		return err
-	}
-	y, err := pk.UnpackDouble(r)
-	if err != nil {
-		return err
-	}
-	z, err := pk.UnpackDouble(r)
-	if err != nil {
-		return err
-	}
-	yaw, err := pk.UnpackFloat(r)
-	if err != nil {
-		return err
-	}
-	pitch, err := pk.UnpackFloat(r)
-	if err != nil {
-		return err
-	}
-
+	x, _ := pk.UnpackDouble(r)
+	y, _ := pk.UnpackDouble(r)
+	z, _ := pk.UnpackDouble(r)
+	yaw, _ := pk.UnpackFloat(r)
+	pitch, _ := pk.UnpackFloat(r)
 	TeleportID, _ := pk.UnpackVarInt(r)
+	pos := Vector3{X: x, Y: y, Z: z}
+	rot := Vector2{X: float64(yaw), Y: float64(pitch)}
+	g.SetPosition(pos, true)
 	SendTeleportConfirmPacket(g, TeleportID)
-	SendPlayerPositionAndLookPacket(g, x, y, z, yaw, pitch, true)
+	SendPlayerPositionAndLookPacket(g, pos, rot, true)
 	return nil
 }
 
@@ -894,19 +870,13 @@ func HandleEntityLookAndRelativeMove(g *Game, r *bytes.Reader) error {
 	e := g.World.Entities[ID]
 	if e != nil {
 		yaw, err := r.ReadByte()
-		if err != nil {
-			return err
-		}
-
 		pitch, err := r.ReadByte()
-		if err != nil {
-			return err
+		onGround, err := pk.UnpackBoolean(r)
+		v2 := Vector2{
+			X: float64(yaw) / 256 * 360,
+			Y: float64(pitch) / 256 * 360,
 		}
-		var rotation = Vector2{
-			X: float64(yaw),
-			Y: float64(pitch),
-		}
-		e.SetRotation(rotation)
+		e.SetRotation(v2, onGround)
 
 		err = HandleEntityRelativeMove(g, r)
 		if err != nil {
@@ -936,7 +906,7 @@ func HandleSetSlotPacket(g *Game, r *bytes.Reader) error {
 	if err != nil {
 		return err
 	}
-	slotData, err := UnpackSlot(r)
+	slotData, err := pk.UnpackSlot(r)
 	if err != nil {
 		return err
 	}
@@ -955,35 +925,13 @@ func HandleSetSlotPacket(g *Game, r *bytes.Reader) error {
 }
 
 func HandleSoundEffect(g *Game, r *bytes.Reader) error {
-	SoundID, err := pk.UnpackVarInt(r)
-	if err != nil {
-		return err
-	}
-	SoundCategory, err := pk.UnpackVarInt(r)
-	if err != nil {
-		return err
-	}
-
-	x, err := pk.UnpackInt32(r)
-	if err != nil {
-		return err
-	}
-	y, err := pk.UnpackInt32(r)
-	if err != nil {
-		return err
-	}
-	z, err := pk.UnpackInt32(r)
-	if err != nil {
-		return err
-	}
-	Volume, err := pk.UnpackFloat(r)
-	if err != nil {
-		return err
-	}
-	Pitch, err := pk.UnpackFloat(r)
-	if err != nil {
-		return err
-	}
+	SoundID, _ := pk.UnpackVarInt(r)
+	SoundCategory, _ := pk.UnpackVarInt(r)
+	x, _ := pk.UnpackInt32(r)
+	y, _ := pk.UnpackInt32(r)
+	z, _ := pk.UnpackInt32(r)
+	Volume, _ := pk.UnpackFloat(r)
+	Pitch, _ := pk.UnpackFloat(r)
 	g.Events <- SoundEffectEvent{Sound: SoundID, Category: SoundCategory, X: float64(x) / 8, Y: float64(y) / 8, Z: float64(z) / 8, Volume: Volume, Pitch: Pitch}
 
 	return nil
@@ -992,55 +940,34 @@ func HandleSoundEffect(g *Game, r *bytes.Reader) error {
 func HandleSpawnPlayerPacket(g *Game, r *bytes.Reader) (err error) {
 	np := new(Player)
 	np.ID, err = pk.UnpackVarInt(r)
-	if err != nil {
-		return
-	}
 	np.UUID[0], err = pk.UnpackInt64(r)
-	if err != nil {
-		return
-	}
 	np.UUID[1], err = pk.UnpackInt64(r)
-	if err != nil {
-		return
-	}
-	np.X, err = pk.UnpackDouble(r)
-	if err != nil {
-		return
-	}
-	np.Y, err = pk.UnpackDouble(r)
-	if err != nil {
-		return
-	}
-	np.Z, err = pk.UnpackDouble(r)
-	if err != nil {
-		return
-	}
+	x, err := pk.UnpackDouble(r)
+	y, err := pk.UnpackDouble(r)
+	z, err := pk.UnpackDouble(r)
+	np.SetPosition(Vector3{
+		X: x,
+		Y: y,
+		Z: z,
+	}, true /* Assume the player is on ground */)
+	yaw, err := pk.UnpackDouble(r)
+	pitch, err := pk.UnpackDouble(r)
+	np.SetRotation(Vector2{
+		X: yaw,
+		Y: pitch,
+	}, true /* Assume the player is on ground */)
 
-	yaw, err := r.ReadByte()
-	if err != nil {
-		return err
-	}
-
-	pitch, err := r.ReadByte()
-	if err != nil {
-		return err
-	}
-
-	np.Yaw = float32(yaw) * (1.0 / 256)
-	np.Pitch = float32(pitch) * (1.0 / 256)
-
-	g.World.Entities[np.ID] = &np.LivingEntity // Add the player to the world entities
-	g.World.Entities[np.ID].SetPosition(Vector3{np.X, np.Y, np.Z}, true)
+	g.World.Entities[np.ID] = &np.Entity // Add the player to the world entities
 	return nil
 }
 
 func HandleSpawnPositionPacket(g *Game, r *bytes.Reader) error {
-	x, y, z, err := pk.UnpackPosition(r)
+	v3, err := pk.UnpackPosition(r)
 	if err != nil {
 		return err
 	}
-	g.Info.SpawnPosition = Vector3{float64(x), float64(y), float64(z)}
-	g.GetPlayer().SetPosition(g.Info.SpawnPosition, true)
+	g.SetSpawnPosition(v3)
+	SendPlayerPositionPacket(g)
 	return nil
 }
 
@@ -1062,22 +989,12 @@ func HandleTitle(g *Game, reader *bytes.Reader) error {
 
 func HandleUpdateHealthPacket(g *Game, r *bytes.Reader) (err error) {
 	g.Player.Health, err = pk.UnpackFloat(r)
-	if err != nil {
-		return
-	}
 	g.Player.Food, err = pk.UnpackVarInt(r)
-	if err != nil {
-		return
-	}
 	g.Player.FoodSaturation, err = pk.UnpackFloat(r)
-	if err != nil {
-		return
-	}
-
 	if g.Player.Health < 1 { // Player is dead
 		g.Events <- PlayerDeadEvent{} // Dead event
-		SendPlayerPositionAndLookPacket(g, g.Player.X, g.Player.Y, g.Player.Z, g.Player.Yaw, g.Player.Pitch, true)
-		time.Sleep(time.Second * 2)  // Wait for 2 sec make it more like a human
+		SendPlayerPositionAndLookPacket(g, g.Info.SpawnPosition, g.Player.Rotation, true)
+		time.Sleep(time.Duration(rand.Intn(2000)+1000) * time.Millisecond)
 		SendClientStatusPacket(g, 0) // Status 0 means perform respawn
 	}
 	return
@@ -1085,23 +1002,11 @@ func HandleUpdateHealthPacket(g *Game, r *bytes.Reader) (err error) {
 
 func HandleWindowItemsPacket(g *Game, r *bytes.Reader) (err error) {
 	WindowID, err := r.ReadByte()
-	if err != nil {
-		return
-	}
-
 	Count, err := pk.UnpackInt16(r)
-	if err != nil {
-		return
-	}
-
 	slots := make([]Slot, Count)
 	for i := int16(0); i < Count; i++ {
-		slots[i], err = UnpackSlot(r)
-		if err != nil {
-			return
-		}
+		slots[i], err = pk.UnpackSlot(r)
 	}
-
 	switch WindowID {
 	case 0: //is player inventory
 		g.Player.Inventory = slots
@@ -1139,13 +1044,17 @@ func TweenLookAt(g *Game, x, y, z float64, t time.Duration) {
 func TweenLook(g *Game, yaw, pitch float32, t time.Duration) {
 	p := g.GetPlayer()
 	start := time.Now()
-	yaw0, pitch0 := p.Yaw, p.Pitch
-	ofstY, ofstP := yaw-yaw0, pitch-pitch0
-	var scale float32
-	for scale < 1 {
-		scale = float32(time.Since(start)) / float32(t)
-		g.LookYawPitch(yaw0+ofstY*scale, pitch0+ofstP*scale)
-		time.Sleep(time.Millisecond * 50)
+	yaw0, pitch0 := p.Rotation.X, p.Rotation.Y
+	for {
+		elapsed := time.Since(start)
+		if elapsed > t {
+			break
+		}
+		p.SetRotation(Vector2{
+			X: float64(float32(yaw0) + (yaw-float32(yaw0))*float32(elapsed)/float32(t)),
+			Y: float64(float32(pitch0) + (pitch-float32(pitch0))*float32(elapsed)/float32(t)),
+		}, true)
+		time.Sleep(10 * time.Millisecond)
 	}
 }
 
@@ -1162,20 +1071,17 @@ func TweenLineMove(g *Game, x, z float64) error {
 	v3.Y = math.Floor(v3.Y) + 0.5
 	ofstX, ofstZ := x-v3.X, z-v3.Z
 	t := time.Duration(float64(time.Second) * (math.Sqrt(ofstX*ofstX+ofstZ*ofstZ) / 4.2))
-	var scale float64
-	for scale < 1 {
-		scale = float64(time.Since(start)) / float64(t)
-		g.SetPosition(Vector3{
-			X: v3.X + ofstX*scale,
+	for {
+		elapsed := time.Since(start)
+		if elapsed > t {
+			break
+		}
+		p.SetPosition(Vector3{
+			X: v3.X + ofstX*float64(elapsed)/float64(t),
 			Y: v3.Y,
-			Z: v3.Z + ofstZ*scale,
-		}, g.Player.OnGround)
-		time.Sleep(time.Millisecond * 50)
-	}
-
-	p = g.GetPlayer()
-	if !similar(p.X, x) || !similar(p.Z, z) {
-		return fmt.Errorf("wrongly move")
+			Z: v3.Z + ofstZ*float64(elapsed)/float64(t),
+		}, true)
+		time.Sleep(10 * time.Millisecond)
 	}
 	return nil
 }
@@ -1187,52 +1093,55 @@ func similar(a, b float64) bool {
 // TweenJump simulate player jump make no headway
 func (g *Game) TweenJump() {
 	p := g.GetPlayer()
-	y := math.Floor(p.Y)
-	for tick := 0; tick < 11; tick++ {
-		h := -1.7251e-8 + 0.4591*float64(tick) - 0.0417*float64(tick)*float64(tick)
-
-		g.SetPosition(Vector3{
-			X: p.X,
-			Y: y + h,
-			Z: p.Z,
-		}, false)
-		time.Sleep(time.Millisecond * 50)
+	v3 := p.GetPosition()
+	v3.Y = math.Floor(v3.Y) + 0.5
+	p.SetPosition(v3, true)
+	start := time.Now()
+	for {
+		elapsed := time.Since(start)
+		if elapsed > 500*time.Millisecond {
+			break
+		}
+		p.SetPosition(Vector3{
+			X: v3.X,
+			Y: v3.Y + 0.5*math.Sin(float64(elapsed)/float64(500*time.Millisecond)*math.Pi),
+			Z: v3.Z,
+		}, true)
+		time.Sleep(10 * time.Millisecond)
 	}
-	g.SetPosition(Vector3{
-		X: p.X,
-		Y: y,
-		Z: p.Z,
-	}, true)
 }
 
 // TweenJumpTo simulate player jump up a block
 func TweenJumpTo(g *Game, x, z int) {
 	p := g.GetPlayer()
-	y := math.Floor(p.Y)
-	for tick := 0; tick < 7; tick++ {
-		h := -1.7251e-8 + 0.4591*float64(tick) - 0.0417*float64(tick)*float64(tick)
-
-		g.SetPosition(Vector3{
-			X: p.X,
-			Y: y + h,
-			Z: p.Z,
-		}, false)
-		time.Sleep(time.Millisecond * 50)
+	v3 := p.GetPosition()
+	v3.Y = math.Floor(v3.Y) + 0.5
+	p.SetPosition(v3, true)
+	start := time.Now()
+	for {
+		elapsed := time.Since(start)
+		if elapsed > 500*time.Millisecond {
+			break
+		}
+		p.SetPosition(Vector3{
+			X: v3.X,
+			Y: v3.Y + 0.5*math.Sin(float64(elapsed)/float64(500*time.Millisecond)*math.Pi),
+			Z: v3.Z,
+		}, true)
+		time.Sleep(10 * time.Millisecond)
 	}
-	err := TweenLineMove(g, float64(x)+0.5, float64(z)+0.5)
-	if err != nil {
-		return
-	}
-	CalibratePos(g)
+	v3.X, v3.Z = float64(x)+0.5, float64(z)+0.5
+	p.SetPosition(v3, true)
 }
 
 func CalibratePos(g *Game) {
 	p := g.GetPlayer()
-	x, y, z := p.GetBlockPos()
-	for NonSolid(g.GetBlock(x, y-1, z).String()) {
-		y--
-		g.SetPosition(Vector3{X: float64(x) + 0.5, Y: float64(y), Z: float64(z) + 0.5}, true) // TODO: Find a better way to do this
+	v3 := p.GetBlockPos()
+	v3under := p.GetBlockPosUnder()
+	for NonSolid(g.GetBlock(v3under).String()) {
+		v3under.Y--
+		g.SetPosition(v3.Add(Vector3{X: 0.5, Y: 0.5, Z: 0.5}), true)
 		time.Sleep(time.Millisecond * 50)
 	}
-	g.Player.SetPosition(Vector3{X: float64(x) + 0.5, Y: float64(y), Z: float64(z) + 0.5}, true)
+	g.Player.SetPosition(v3.Add(Vector3{X: 0.5, Y: 1, Z: 0.5}), true)
 }

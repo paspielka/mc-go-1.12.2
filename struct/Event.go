@@ -1,5 +1,10 @@
 package _struct
 
+import (
+	. "github.com/edouard127/mc-go-1.12.2/data/World"
+	. "github.com/edouard127/mc-go-1.12.2/maths"
+)
+
 // Event happens in game, and you can receive it from what Game.GetEvent() returns
 type Event interface{}
 
@@ -87,6 +92,14 @@ type CombatEndEvent struct {
 }
 
 type EnterCombatEvent struct{}
+
+type DigStartEvent struct {
+	Block
+}
+
+type DigStopEvent struct {
+	Block
+}
 
 // GetEvents returns an int type channel.
 // When event happens, an event ID will be sent into this chan

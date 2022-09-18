@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"compress/zlib"
 	"fmt"
+	. "github.com/edouard127/mc-go-1.12.2/data"
+	"github.com/edouard127/mc-go-1.12.2/maths"
 	"io"
 	"math"
 )
@@ -93,14 +95,23 @@ func PackVarInt(n int32) (VarInt []byte) {
 	return
 }
 
-// PackPosition 打包一个位置
-func PackPosition(x, y, z int) (p []byte) {
+func PackPosition(v3 maths.Vector3) (p []byte) {
 	p = make([]byte, 8)
-	position := (int64(x&0x3FFFFFF) << 38) | int64((y&0xFFF)<<26) | int64(z&0x3FFFFFF)
-	for i := 7; i >= 0; i-- {
-		p[i] = byte(position)
-		position >>= 8
-	}
+	p[0] = byte(int32(v3.X) & 0x3FFFFFF)
+	p[1] = byte(int32(v3.X) >> 26)
+	p[1] |= byte(int32(v3.Y)&0xF) << 2
+	p[2] = byte(int32(v3.Y) >> 4)
+	p[2] |= byte(int32(v3.Z)&0x3FFFFFF) << 4
+	p[3] = byte(int32(v3.Z) >> 22)
+	return
+}
+
+func PackRotation(v2 maths.Vector2) (p []byte) {
+	p = make([]byte, 8)
+	p[0] = byte(int32(v2.X) & 0x3FFFFFF)
+	p[1] = byte(int32(v2.X) >> 26)
+	p[1] |= byte(int32(v2.Y)&0xF) << 2
+	p[2] = byte(int32(v2.Y) >> 4)
 	return
 }
 
@@ -172,6 +183,18 @@ func UnpackVarInt(b io.ByteReader) (int32, error) {
 	return int32(n), nil //这里要把超过int32的负数溢出
 }
 
+func UnpackByte(b io.ByteReader) (byte, error) {
+	return b.ReadByte()
+}
+
+func UnpackInt8(b io.ByteReader) (int8, error) {
+	bs, err := ReadNBytes(b, 1)
+	if err != nil {
+		return 0, err
+	}
+	return int8(bs[0]), nil
+}
+
 // UnpackInt16 读取一个16位有符号整数
 func UnpackInt16(b io.ByteReader) (int16, error) {
 	bs, err := ReadNBytes(b, 2)
@@ -200,34 +223,33 @@ func UnpackInt64(b io.ByteReader) (int64, error) {
 		int64(bs[4])<<24 | int64(bs[5])<<16 | int64(bs[6])<<8 | int64(bs[7]), nil
 }
 
-// UnpackPosition 读取一个位置
-func UnpackPosition(b io.ByteReader) (x, y, z float64, err error) {
+func UnpackPosition(b io.ByteReader) (v maths.Vector3, err error) {
 	position, err := UnpackInt64(b)
 
-	x = float64(position >> 38)
-	y = float64((position >> 26) & 0xFFF)
-	z = float64(position << 38 >> 38)
+	v = maths.Vector3{
+		X: float64(position >> 38),
+		Y: float64((position >> 26) & 0xFFF),
+		Z: float64(position << 38 >> 38),
+	}
 
-	//处理负数
-	if x >= 1<<25 {
-		x -= 1 << 26
+	// Handling negative numbers
+	if v.X >= 1<<25 {
+		v.X -= 1 << 26
 	}
-	if y >= 1<<11 {
-		y -= 1 << 12
+	if v.Y >= 1<<11 {
+		v.Y -= 1 << 12
 	}
-	if z >= 1<<25 {
-		z -= 1 << 26
+	if v.Z >= 1<<25 {
+		v.Z -= 1 << 26
 	}
 	return
 }
 
-// UnpackFloat 读取一个单精度浮点数
 func UnpackFloat(b io.ByteReader) (float32, error) {
 	n, err := UnpackInt32(b)
 	return math.Float32frombits(uint32(n)), err
 }
 
-// UnpackDouble 读取一个双精度浮点数
 func UnpackDouble(b io.ByteReader) (float64, error) {
 	n, err := UnpackInt64(b)
 	return math.Float64frombits(uint64(n)), err
@@ -258,7 +280,36 @@ func UnpackMetadata(b io.ByteReader) (metadata []Metadata, err error) {
 	return
 }
 
-// RecvPacket recive a packet from server
+func UnpackSlot(b *bytes.Reader) (Slot, error) {
+	index := 0
+	p, err := b.ReadByte()
+	if err != nil {
+		return Slot{}, err
+	}
+	Present := p != 0x00
+	index++
+	if Present {
+		itemID, err := UnpackVarInt(b)
+		if err != nil {
+			return Slot{}, err
+		}
+		count, err := b.ReadByte()
+		if err != nil {
+			return Slot{}, err
+		}
+		index++
+
+		//nbt.Unmarshal(nbt.Uncompressed)
+
+		return Slot{
+			ID:    int(itemID),
+			Count: count,
+		}, nil
+	}
+	return Slot{}, nil
+}
+
+// RecvPacket receive a packet from server
 func RecvPacket(r io.ByteReader, useZlib bool) (*Packet, error) {
 	var len int
 	for i := 0; i < 5; i++ { //读数据前的长度标记
@@ -285,7 +336,7 @@ func RecvPacket(r io.ByteReader, useZlib bool) (*Packet, error) {
 		}
 	}
 
-	//解压数据
+	// Decompress data
 	if useZlib {
 		return UnCompress(data)
 	}
@@ -296,7 +347,6 @@ func RecvPacket(r io.ByteReader, useZlib bool) (*Packet, error) {
 	}, nil
 }
 
-// UnCompress 读取一个压缩的包
 func UnCompress(data []byte) (*Packet, error) {
 	reader := bytes.NewReader(data)
 	sizeUncompressed, err := UnpackVarInt(reader)
@@ -325,7 +375,6 @@ func UnCompress(data []byte) (*Packet, error) {
 	}, nil
 }
 
-// Compress 压缩数据
 func Compress(data []byte) []byte {
 	var b bytes.Buffer
 	w := zlib.NewWriter(&b)

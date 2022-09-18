@@ -1,4 +1,4 @@
-package _struct
+package maths
 
 // Vector2 is a 2D vector
 type Vector2 struct {

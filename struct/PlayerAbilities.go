@@ -4,5 +4,5 @@ package _struct
 type PlayerAbilities struct {
 	Flags               int8
 	FlyingSpeed         float32
-	FieldofViewModifier float32
+	FieldOfViewModifier float32
 }

@@ -3,11 +3,12 @@ package _struct
 import (
 	"bytes"
 	"fmt"
+	"github.com/edouard127/mc-go-1.12.2/data/World"
 	pk "github.com/edouard127/mc-go-1.12.2/packet"
 	"io"
 )
 
-func UnpackChunkDataPacket(p *pk.Packet, hasSkyLight bool) (c *Chunk, x, y int, err error) {
+func UnpackChunkDataPacket(p *pk.Packet, hasSkyLight bool) (c *World.Chunk, x, y int, err error) {
 	reader := bytes.NewReader(p.Data)
 	// Block coordinates
 	X, err := pk.UnpackInt32(reader)
@@ -54,8 +55,8 @@ func UnpackChunkDataPacket(p *pk.Packet, hasSkyLight bool) (c *Chunk, x, y int, 
 	return cc, int(X), int(Y), err
 }
 
-func readChunkColumn(isFull bool, mask int32, data *bytes.Reader, hasSkyLight bool) (*Chunk, error) {
-	var c Chunk
+func readChunkColumn(isFull bool, mask int32, data *bytes.Reader, hasSkyLight bool) (*World.Chunk, error) {
+	var c World.Chunk
 	for sectionY := 0; sectionY < 16; sectionY++ {
 		if (mask & (1 << uint(sectionY))) != 0 { // Is the given bit set in the mask?
 			BitsPerBlock, err := data.ReadByte()
@@ -136,7 +137,7 @@ func perBits(BitsPerBlock byte) uint {
 	}
 }
 
-func fillSection(s *Section, bpb uint, DataArray []int64, palette []uint) {
+func fillSection(s *World.Section, bpb uint, DataArray []int64, palette []uint) {
 	mask := uint(1<<bpb - 1)
 	for n := 0; n < 16*16*16; n++ {
 		offset := uint(n * int(bpb))

@@ -1,4 +1,4 @@
-package _struct
+package World
 
 import "encoding/json"
 

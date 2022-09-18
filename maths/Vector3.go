@@ -1,8 +1,4 @@
-package _struct
-
-import (
-	. "github.com/edouard127/mc-go-1.12.2/packet"
-)
+package maths
 
 // Vector3 is a 3D vector
 type Vector3 struct {
@@ -39,12 +35,4 @@ func (v3 Vector3) LengthSquared() float64 {
 
 func (v3 Vector3) Normalize() Vector3 {
 	return v3.Div(Vector3{v3.Length(), v3.Length(), v3.Length()})
-}
-
-func PackVector3(v3 Vector3) (p []byte) {
-	var data []byte
-	data = append(data, PackDouble(v3.X)...)
-	data = append(data, PackDouble(v3.Y)...)
-	data = append(data, PackDouble(v3.Z)...)
-	return data
 }

@@ -1,6 +1,7 @@
 package PathFinding
 
 import (
+	. "github.com/edouard127/mc-go-1.12.2/maths"
 	. "github.com/edouard127/mc-go-1.12.2/struct"
 	"math"
 )
