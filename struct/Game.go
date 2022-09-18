@@ -173,6 +173,15 @@ func HandlePack(g *Game, p *pk.Packet) (err error) {
 	return
 }
 
+func HandleDisconnect(g *Game, reader *bytes.Reader) error {
+	reason, err := pk.UnpackString(reader)
+	if err != nil {
+		return err
+	}
+	g.Events <- DisconnectEvent{Text: reason}
+	return nil
+}
+
 type EntityMetadataEvent struct {
 	EntityID int32
 	Metadata []pk.Metadata
