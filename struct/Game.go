@@ -44,55 +44,53 @@ type Game struct {
 // HandleGame receive server packet and response them correctly.
 // Note that HandleGame will block if you don't receive from Events.
 func (g *Game) HandleGame() error {
+	defer func() {
+		close(g.Events)
+	}()
+
+	errChan := make(chan error)
+
+	g.SendChan = make(chan pk.Packet, 64)
 	go func() {
-		defer func() {
-			close(g.Events)
-		}()
-
-		errChan := make(chan error)
-
-		g.SendChan = make(chan pk.Packet, 64)
-		go func() {
-			for p := range g.SendChan {
-				err := g.SendPacket(&p)
-				if err != nil {
-					errChan <- fmt.Errorf("send packet in game fail: %v", err)
-					return
-				}
-			}
-		}()
-
-		g.recvChan = make(chan *pk.Packet, 64)
-		go func() {
-			for {
-				pack, err := g.recvPacket()
-				if err != nil {
-					close(g.recvChan)
-					errChan <- fmt.Errorf("recv packet in game fail: %v", err)
-					return
-				}
-
-				g.recvChan <- pack
-			}
-		}()
-		for {
-			select {
-			case err := <-errChan:
-				panic(fmt.Sprintf("error: %v\n", err))
-			case pack, ok := <-g.recvChan:
-				if !ok {
-					panic(fmt.Sprintf("packet %v is not ok", pack))
-				}
-				err := HandlePack(g, pack)
-				if err != nil {
-					panic(fmt.Errorf("handle packet 0x%X error: %v", pack, err))
-				}
-			case f := <-g.Motion:
-				g.Debug <- "recv motion"
-				go f()
+		for p := range g.SendChan {
+			err := g.SendPacket(&p)
+			if err != nil {
+				errChan <- fmt.Errorf("send packet in game fail: %v", err)
+				return
 			}
 		}
 	}()
+
+	g.recvChan = make(chan *pk.Packet, 64)
+	go func() {
+		for {
+			pack, err := g.recvPacket()
+			if err != nil {
+				close(g.recvChan)
+				errChan <- fmt.Errorf("recv packet in game fail: %v", err)
+				return
+			}
+
+			g.recvChan <- pack
+		}
+	}()
+	for {
+		select {
+		case err := <-errChan:
+			panic(fmt.Sprintf("error: %v\n", err))
+		case pack, ok := <-g.recvChan:
+			if !ok {
+				panic(fmt.Sprintf("packet %v is not ok", pack))
+			}
+			err := HandlePack(g, pack)
+			if err != nil {
+				panic(fmt.Errorf("handle packet 0x%X error: %v", pack, err))
+			}
+		case f := <-g.Motion: // TODO: Fix memory block
+			g.Debug <- "recv motion"
+			go f()
+		}
+	}
 	return nil
 }
 func HandlePack(g *Game, p *pk.Packet) (err error) {
