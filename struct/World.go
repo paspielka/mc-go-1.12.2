@@ -12,8 +12,11 @@ type WorldTime struct {
 	TimeOfDay int64
 }
 
-func (w *World) SetTime(t WorldTime) {
+func (w *World) SetTime(t WorldTime) WorldTime {
+	// Round up to the nearest 20
+	t.TimeOfDay = (t.TimeOfDay + 19) / 20 * 20
 	w.Time = t
+	return t
 }
 
 func (w *World) SetBlock(x, y, z int, b Block) {
@@ -24,12 +27,11 @@ func (w *World) SetBlock(x, y, z int, b Block) {
 	}
 }
 
-func (w *World) UpdateTime() {
-	if w.Time.TimeOfDay == 24000 {
-		w.Time.WorldAge += w.Time.TimeOfDay
+func (w *World) UpdateTime(t int64) {
+	if w.Time.TimeOfDay >= 24000 {
 		w.Time.TimeOfDay = 0
 	} else {
-		w.Time.TimeOfDay += 20
+		w.Time.TimeOfDay += t
 	}
 }
 

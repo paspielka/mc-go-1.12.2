@@ -217,8 +217,9 @@ func HandleTimeUpdate(g *Game, reader *bytes.Reader) error {
 		WorldAge:  worldAge,
 		TimeOfDay: timeOfDay,
 	}
-	g.World.SetTime(time)
-	g.Events <- TimeUpdateEvent{Time: time}
+	fmt.Println(time)
+	t := g.World.SetTime(time)
+	g.Events <- TimeUpdateEvent{Time: t}
 	return nil
 }
 
@@ -903,6 +904,8 @@ func HandleEntityLookAndRelativeMove(g *Game, r *bytes.Reader) error {
 		if err != nil {
 			return err
 		}
+	} else {
+		return err
 	}
 	return nil
 }
