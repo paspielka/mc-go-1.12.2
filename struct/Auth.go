@@ -57,6 +57,14 @@ func (p *Auth) JoinServer(addr string, port int) (g *Game, err error) {
 		return
 	}
 
+	// Ping
+	pingPacket := PingPacket()
+	err := g.SendPacket(ping)
+	if err != nil {
+		err = fmt.Errorf("send ping packect fail: %v", err)
+		return
+	}
+
 	// Login
 	lsPacket := newLoginStartPacket(p.Name)
 	err = g.SendPacket(lsPacket) //LoginStart
@@ -90,6 +98,8 @@ func (p *Auth) JoinServer(addr string, port int) (g *Game, err error) {
 			g.threshold = int(threshold)
 		case 0x04: //Login Plugin Request
 			fmt.Println("Waring Login Plugin Request")
+		default:
+			err = fmt.Errorf("unknown packet ID %d at state Login", pack.ID)
 		}
 	}
 }
@@ -221,7 +231,7 @@ func LoginAuth(AsTk, name, UUID string, shareSecret []byte, er encryptionRequest
 	return nil
 }
 
-// AES/CFB8 with random key
+// NewSymmetricEncryption AES/CFB8 with random key
 func NewSymmetricEncryption() (key []byte, encoStream, decoStream cipher.Stream) {
 	key = make([]byte, 16)
 	rand.Read(key) //生成密钥
@@ -261,6 +271,14 @@ func GenEncryptionKeyResponse(shareSecret, publicKey, verifyToken []byte) (erp *
 	erp = &pk.Packet{
 		ID:   0x01,
 		Data: data,
+	}
+	return
+}
+
+func PingPacket() (Ping *pk.Packet) {
+	Ping = pk.Packet{
+		ID:   0xFE,
+		Data: []byte{0x01},
 	}
 	return
 }
