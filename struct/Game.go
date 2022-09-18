@@ -217,7 +217,6 @@ func HandleTimeUpdate(g *Game, reader *bytes.Reader) error {
 		WorldAge:  worldAge,
 		TimeOfDay: timeOfDay,
 	}
-	fmt.Println(time)
 	t := g.World.SetTime(time)
 	g.Events <- TimeUpdateEvent{Time: t}
 	return nil
