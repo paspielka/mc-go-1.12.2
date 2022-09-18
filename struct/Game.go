@@ -438,7 +438,7 @@ func (g *Game) SwingHand(hand bool) {
 func SendAnimationPacket(g *Game, hand int32) {
 	data := pk.PackVarInt(hand)
 	g.SendChan <- pk.Packet{
-		ID:   0x27,
+		ID:   0x1D,
 		Data: data,
 	}
 }
