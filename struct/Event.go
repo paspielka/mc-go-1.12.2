@@ -71,6 +71,10 @@ type EntityRelativeMoveEvent struct {
 
 type TickEvent struct{}
 
+type TimeUpdateEvent struct {
+	Time WorldTime
+}
+
 // GetEvents returns an int type channel.
 // When event happens, an event ID will be sent into this chan
 // Note that HandleGame will block if you don't receive from Events

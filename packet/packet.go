@@ -233,6 +233,31 @@ func UnpackDouble(b io.ByteReader) (float64, error) {
 	return math.Float64frombits(uint64(n)), err
 }
 
+type Metadata struct {
+	Index byte
+	Type  byte
+	Value byte
+}
+
+func UnpackMetadata(b io.ByteReader) (metadata []Metadata, err error) {
+	var index byte
+	for {
+		index, err = b.ReadByte()
+		if err != nil {
+			return
+		}
+		if index == 0xFF {
+			break
+		}
+		metadata = append(metadata, Metadata{
+			Index: index,
+			Type:  index >> 5,
+			Value: index & 0x1F,
+		})
+	}
+	return
+}
+
 // RecvPacket recive a packet from server
 func RecvPacket(r io.ByteReader, useZlib bool) (*Packet, error) {
 	var len int

@@ -4,6 +4,33 @@ package _struct
 type World struct {
 	Entities map[int32]*LivingEntity
 	Chunks   map[ChunkLoc]*Chunk
+	Time     WorldTime
+}
+
+type WorldTime struct {
+	WorldAge  int64
+	TimeOfDay int64
+}
+
+func (w *World) SetTime(t WorldTime) {
+	w.Time = t
+}
+
+func (w *World) SetBlock(x, y, z int, b Block) {
+	c := w.Chunks[ChunkLoc{x >> 4, z >> 4}]
+	if c != nil {
+		cx, cy, cz := x&15, y&15, z&15
+		c.Sections[y/16].Blocks[cx][cy][cz] = b
+	}
+}
+
+func (w *World) UpdateTime() {
+	if w.Time.TimeOfDay == 24000 {
+		w.Time.WorldAge += w.Time.TimeOfDay
+		w.Time.TimeOfDay = 0
+	} else {
+		w.Time.TimeOfDay += 20
+	}
 }
 
 func (w *World) ClosestEntity(v Vector3, maxDistance float64) *LivingEntity {
@@ -21,6 +48,23 @@ func (w *World) ClosestEntity(v Vector3, maxDistance float64) *LivingEntity {
 	}
 
 	return closestEntity
+}
+
+func (w *World) HasEntity(id int32) bool {
+	_, ok := w.Entities[id]
+	return ok
+}
+
+func (w *World) CreateEntity(id int32) *LivingEntity {
+	e := &LivingEntity{
+		ID: id,
+	}
+	w.Entities[id] = e
+	return e
+}
+
+func (w *World) DestroyEntity(id int32) {
+	delete(w.Entities, id)
 }
 
 // Chunk store a 256*16*16 column blocks

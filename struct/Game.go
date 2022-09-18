@@ -104,6 +104,8 @@ func HandlePack(g *Game, p *pk.Packet) (err error) {
 		g.Events <- JoinGameEvent{
 			EntityID: g.Player.ID,
 		}
+	case 0x25:
+
 	/*case 0x18:
 	HandlePluginPacket(g, reader)*/
 	case 0x0D:
@@ -149,16 +151,131 @@ func HandlePack(g *Game, p *pk.Packet) (err error) {
 		err = fmt.Errorf("disconnect")
 	case 0x17:
 	// 	err = handleSetSlotPacket(g, reader)
-	case 0x4D:
+	case 0x49:
 		err = HandleSoundEffect(g, reader)
-	/*case 0x3E: // Entity velocity
-	err = HandleEntityVelocity(g, reader)*/
+	case 0x3E: // Entity velocity
+		err = HandleEntityVelocity(g, reader)
 	case 0x48: // Title
 		err = HandleTitle(g, reader)
+	case 0x36: // Entity Head Look
+		err = HandleEntityHeadLook(g, reader)
+	/*case 0x4C: // Entity Teleport
+	err = HandleEntityTeleport(g, reader)*/
+	/*case 0x1A: // Entity Status
+	err = HandleEntityStatus(g, reader)*/
+	case 0x32: // Destroy Entities
+		err = HandleDestroyEntity(g, reader)
+	case 0x47: // Time update
+		err = HandleTimeUpdate(g, reader)
+	case 0x3C: // Entity Metadata
+		err = HandleEntityMetadata(g, reader)
 	default:
-		//fmt.Printf("unhandled packet 0x%X\n", p.ID)
+		//fmt.Printf("unhandled packet 0x%1X\n", p.ID)
 	}
 	return
+}
+
+type EntityMetadataEvent struct {
+	EntityID int32
+	Metadata []pk.Metadata
+}
+
+func HandleEntityMetadata(g *Game, reader *bytes.Reader) error {
+	entityID, err := pk.UnpackVarInt(reader)
+	if err != nil {
+		return err
+	}
+	metadata, err := pk.UnpackMetadata(reader)
+	if err != nil {
+		return err
+	}
+	for _, m := range metadata {
+		switch m.Type {
+		case 8: // Position
+			fmt.Printf("Position: %v\n", m.Value)
+		case 9: // OptPosition
+			fmt.Printf("OptPosition: %v\n", m.Value)
+		}
+	}
+	g.Events <- EntityMetadataEvent{
+		EntityID: entityID,
+		Metadata: metadata,
+	}
+	return nil
+}
+
+func HandleTimeUpdate(g *Game, reader *bytes.Reader) error {
+	worldAge, err := pk.UnpackInt64(reader)
+	if err != nil {
+		return err
+	}
+	timeOfDay, err := pk.UnpackInt64(reader)
+	if err != nil {
+		return err
+	}
+	time := WorldTime{
+		WorldAge:  worldAge,
+		TimeOfDay: timeOfDay,
+	}
+	g.World.SetTime(time)
+	g.Events <- TimeUpdateEvent{Time: time}
+	return nil
+}
+
+func HandleDestroyEntity(g *Game, reader *bytes.Reader) error {
+	entityID, err := pk.UnpackVarInt(reader)
+	if err != nil {
+		return err
+	}
+	g.World.DestroyEntity(entityID)
+	return nil
+}
+
+func HandleEntityTeleport(g *Game, reader *bytes.Reader) error {
+	entityID, err := pk.UnpackVarInt(reader)
+	if err != nil {
+		return err
+	}
+	x, err := pk.UnpackDouble(reader)
+	if err != nil {
+		return err
+	}
+	y, err := pk.UnpackDouble(reader)
+	if err != nil {
+		return err
+	}
+	z, err := pk.UnpackDouble(reader)
+	if err != nil {
+		return err
+	}
+	yaw, err := pk.UnpackFloat(reader)
+	if err != nil {
+		return err
+	}
+	pitch, err := pk.UnpackFloat(reader)
+	if err != nil {
+		return err
+	}
+	onGround, err := pk.UnpackBoolean(reader)
+	if err != nil {
+		return err
+	}
+	entity, ok := g.World.Entities[entityID]
+	if !ok {
+		return fmt.Errorf("entity not found")
+	}
+	position := Vector3{
+		X: x,
+		Y: y,
+		Z: z,
+	}
+	rotation := Vector2{
+		X: float64(yaw),
+		Y: float64(pitch),
+	}
+	entity.SetPosition(position, onGround)
+	entity.SetRotation(rotation)
+	return nil
 }
 
 func (g *Game) recvPacket() (*pk.Packet, error) {
@@ -244,14 +361,14 @@ func (g *Game) GetPlayer() *Player {
 	return &g.Player
 }
 func (g *Game) Attack(e *LivingEntity) {
-	fmt.Printf("Entity position: %v\n", e.Position)
 	g.LookAt(e.X, e.Y, e.Z)
 	//SendUseEntityPacket(g, e.ID, 1, e.Position)
 }
 func (g *Game) SetPosition(v3 Vector3, onGround bool) {
 	g.Motion <- func() {
-		g.Player.X, g.Player.Y, g.Player.Z = v3.X, v3.Y, v3.Z
-		g.Player.OnGround = onGround
+		g.GetPlayer().Position = v3
+		g.GetPlayer().X, g.GetPlayer().Y, g.GetPlayer().Z = v3.X, v3.Y, v3.Z
+		g.GetPlayer().OnGround = onGround
 		SendPlayerPositionPacket(g) // Update the location to the server
 	}
 }
@@ -287,10 +404,13 @@ func (g *Game) LookAt(x, y, z float64) {
 			yaw = 360 + yaw
 		}
 		pitch := -math.Asin(dy/r) / math.Pi * 180
-		g.Player.Yaw = float32(yaw)
-		g.Player.Pitch = float32(pitch)
+		g.GetPlayer().Yaw, g.GetPlayer().Pitch = float32(yaw), float32(pitch)
+		g.GetPlayer().SetRotation(Vector2{
+			X: float64(yaw),
+			Y: float64(pitch),
+		})
 
-		SendPlayerLookPacket(g) // Update the location to the server
+		SendPlayerLookPacket(g, float32(yaw), float32(pitch), true) // Update the location to the server
 	}
 }
 
@@ -299,9 +419,8 @@ func (g *Game) LookAt(x, y, z float64) {
 // if |pitch|>90 the player's hand will be very strange.
 func (g *Game) LookYawPitch(yaw, pitch float32) {
 	g.Motion <- func() {
-		fmt.Printf("yaw: %f, pitch: %f", yaw, pitch)
-		g.Player.Yaw, g.Player.Pitch = yaw, pitch
-		SendPlayerLookPacket(g) // Update the orientation to the server
+		g.GetPlayer().Yaw, g.GetPlayer().Pitch = yaw, pitch
+		SendPlayerLookPacket(g, yaw, pitch, true) // Update the orientation to the server
 	}
 }
 
@@ -372,18 +491,17 @@ func SendPlayerPositionAndLookPacket(g *Game, x, y, z float64, yaw, pitch float3
 	data = append(data, pk.PackFloat(yaw)...)
 	data = append(data, pk.PackFloat(pitch)...)
 	data = append(data, pk.PackBoolean(onGround))
-	fmt.Printf("x: %f, y: %f, z: %f, yaw: %f, pitch: %f, onGround: %t", x, y, z, yaw, pitch, onGround)
 
 	g.SendChan <- pk.Packet{
 		ID:   0x0E,
 		Data: data,
 	}
 }
-func SendPlayerLookPacket(g *Game) {
+func SendPlayerLookPacket(g *Game, yaw, pitch float32, onGround bool) {
 	var data []byte
-	data = append(data, pk.PackFloat(g.Player.Yaw)...)
-	data = append(data, pk.PackFloat(g.Player.Pitch)...)
-	data = append(data, pk.PackBoolean(g.Player.OnGround))
+	data = append(data, pk.PackFloat(yaw)...)
+	data = append(data, pk.PackFloat(pitch)...)
+	data = append(data, pk.PackBoolean(onGround))
 	g.SendChan <- pk.Packet{
 		ID:   0x0F,
 		Data: data,
@@ -410,13 +528,12 @@ func SendTeleportConfirmPacket(g *Game, TeleportID int32) {
 	}
 }
 
-/*func UpdateVelocity(g *Game, entityID int32, velocity Vector3) {
+func UpdateVelocity(g *Game, entityID int32, velocity Vector3) {
 	e := g.World.Entities[entityID]
 	if e != nil {
-		panic("UpdateVelocity: entity not found")
+		e.SetPosition(e.Position.Add(velocity), true)
 	}
-	(*e).SetPosition((*e).Position.Add(velocity))
-}*/
+}
 
 func SendUseEntityPacket(g *Game, TargetEntityID int32, Type int32, Pos Vector3) {
 	data := pk.PackVarInt(TargetEntityID)
@@ -529,6 +646,35 @@ func handleDeclareRecipesPacket(g *Game, r *bytes.Reader) {
 		 }*/
 }
 
+func HandleEntity(g *Game, r *bytes.Reader) error {
+	entityID, err := pk.UnpackVarInt(r)
+	if err != nil {
+		return err
+	}
+	if !g.World.HasEntity(entityID) {
+		g.World.CreateEntity(entityID)
+	}
+	return nil
+}
+
+func HandleEntityHeadLook(g *Game, reader *bytes.Reader) error {
+	entityID, err := pk.UnpackVarInt(reader)
+	if err != nil {
+		return err
+	}
+	yaw, err := reader.ReadByte()
+	if err != nil {
+		return err
+	}
+	e := g.World.Entities[entityID]
+	if e != nil {
+		e.Yaw = float32(yaw)
+	} else {
+		g.World.CreateEntity(entityID)
+	}
+	return nil
+}
+
 func HandleEntityVelocity(g *Game, reader *bytes.Reader) error {
 	entityID, err := pk.UnpackVarInt(reader)
 	if err != nil {
@@ -551,11 +697,11 @@ func HandleEntityVelocity(g *Game, reader *bytes.Reader) error {
 		Y: float64(velY) / 8000,
 		Z: float64(velZ) / 8000,
 	}
+	UpdateVelocity(g, entityID, velocity)
 	g.Events <- EntityVelocityEvent{
 		EntityID: entityID,
 		Velocity: velocity,
 	}
-	//UpdateVelocity(g, entityID, velocity)
 	return nil
 }
 
@@ -880,13 +1026,14 @@ func HandleSpawnPlayerPacket(g *Game, r *bytes.Reader) (err error) {
 	return nil
 }
 
-func HandleSpawnPositionPacket(g *Game, r *bytes.Reader) (err error) {
-	g.Info.SpawnPosition.X, g.Info.SpawnPosition.Y, g.Info.SpawnPosition.Z, err =
-		pk.UnpackPosition(r)
-	fmt.Println("Spawn position:", g.Info.SpawnPosition)
-	// TODO: Fix this
-	//g.SetPosition(g.Info.SpawnPosition, true) // TODO: Find a better way to do this
-	return
+func HandleSpawnPositionPacket(g *Game, r *bytes.Reader) error {
+	x, y, z, err := pk.UnpackPosition(r)
+	if err != nil {
+		return err
+	}
+	g.Info.SpawnPosition = Vector3{float64(x), float64(y), float64(z)}
+	g.GetPlayer().SetPosition(g.Info.SpawnPosition, true)
+	return nil
 }
 
 func HandleTitle(g *Game, reader *bytes.Reader) error {
