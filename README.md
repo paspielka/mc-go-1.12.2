@@ -20,15 +20,9 @@ A golang minecraft robot package.
 - [x] Join online server
 - [x] Join offline server
 - [x] Parse chunk data
-- [x] Use entity
-- [x] Use item
-- [x] Listening sound
 - [x] Send chat message
 - [x] Recive and **parse** chat message
-- [x] Move around and look around
 - [x] Swing hands
-- [x] Mine blocks
-- [x] Place blocks
 
 ## Todo
 - [ ] View inventory
@@ -40,6 +34,12 @@ A golang minecraft robot package.
 - [ ] Enchant item
 - [ ] Record entity
 - [ ] Unload chunks
+- [ ] Use entity
+- [ ] Use item
+- [ ] Move around and look around
+- [ ] Mine blocks
+- [ ] Place blocks
+- [ ] Listening sound
 - [ ] Path finding
 
 
