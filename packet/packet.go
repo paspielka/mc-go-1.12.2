@@ -96,23 +96,16 @@ func PackVarInt(n int32) (VarInt []byte) {
 }
 
 func PackPosition(v3 maths.Vector3) (p []byte) {
-	p = make([]byte, 8)
-	p[0] = byte(int32(v3.X) & 0x3FFFFFF)
-	p[1] = byte(int32(v3.X) >> 26)
-	p[1] |= byte(int32(v3.Y)&0xF) << 2
-	p[2] = byte(int32(v3.Y) >> 4)
-	p[2] |= byte(int32(v3.Z)&0x3FFFFFF) << 4
-	p[3] = byte(int32(v3.Z) >> 22)
-	return
+	p = append(p, PackDouble(v3.X)...)
+	p = append(p, PackDouble(v3.Y)...)
+	p = append(p, PackDouble(v3.Z)...)
+	return p
 }
 
 func PackRotation(v2 maths.Vector2) (p []byte) {
-	p = make([]byte, 8)
-	p[0] = byte(int32(v2.X) & 0x3FFFFFF)
-	p[1] = byte(int32(v2.X) >> 26)
-	p[1] |= byte(int32(v2.Y)&0xF) << 2
-	p[2] = byte(int32(v2.Y) >> 4)
-	return
+	p = append(p, PackFloat(float32(v2.X))...)
+	p = append(p, PackFloat(float32(v2.Y))...)
+	return p
 }
 
 // PackFloat 打包一个32位浮点数

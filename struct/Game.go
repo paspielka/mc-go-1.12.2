@@ -38,7 +38,6 @@ type Game struct {
 	recvChan chan *pk.Packet //be used when HandleGame
 	Events   chan Event
 	Motion   chan func() //used to submit a function and HandleGame do
-	Debug    chan string
 }
 
 // HandleGame receive server packet and response them correctly.
@@ -87,14 +86,13 @@ func (g *Game) HandleGame() error {
 				panic(fmt.Errorf("handle packet 0x%X error: %v", pack, err))
 			}
 		case f := <-g.Motion: // TODO: Fix memory block
-			g.Debug <- "recv motion"
 			go f()
 		}
 	}
 	return nil
 }
 func HandlePack(g *Game, p *pk.Packet) (err error) {
-	g.Debug <- fmt.Sprintf("recv packet 0x%X", p.ID)
+	fmt.Printf("recv packet 0x%X\n", p.ID)
 	reader := bytes.NewReader(p.Data)
 
 	switch p.ID {
@@ -169,7 +167,7 @@ func HandlePack(g *Game, p *pk.Packet) (err error) {
 	case 0x3C: // Entity Metadata
 		err = HandleEntityMetadata(g, reader)
 	default:
-		g.Debug <- fmt.Sprintf("unhandled packet 0x%X", p.ID)
+		fmt.Printf("unhandled packet 0x%X\n", p.ID)
 	}
 	return nil
 }
@@ -231,14 +229,8 @@ func HandleEntityMetadata(g *Game, reader *bytes.Reader) error {
 }
 
 func HandleTimeUpdate(g *Game, reader *bytes.Reader) error {
-	worldAge, err := pk.UnpackInt64(reader)
-	if err != nil {
-		return err
-	}
-	timeOfDay, err := pk.UnpackInt64(reader)
-	if err != nil {
-		return err
-	}
+	worldAge, _ := pk.UnpackInt64(reader)
+	timeOfDay, _ := pk.UnpackInt64(reader)
 	time := WorldTime{
 		WorldAge:  worldAge,
 		TimeOfDay: timeOfDay,
@@ -538,11 +530,10 @@ func SendTeleportConfirmPacket(g *Game, TeleportID int32) {
 }
 
 func UpdateVelocity(g *Game, entityID int32, velocity Vector3) {
-	g.Motion <- func() {
-		e := g.World.Entities[entityID]
-		if e != nil {
-			e.SetPosition(e.Position.Add(velocity), true)
-		}
+	fmt.Printf("UpdateVelocity: %v %v %v\n", velocity.X, velocity.Y, velocity.Z)
+	e := g.World.Entities[entityID]
+	if e != nil {
+		e.SetPosition(e.Position.Add(velocity), true)
 	}
 }
 
@@ -700,6 +691,7 @@ func HandleEntityVelocity(g *Game, reader *bytes.Reader) error {
 func HandleEntityRelativeMove(g *Game, reader *bytes.Reader) error {
 	entityID, err := pk.UnpackVarInt(reader)
 	if err != nil {
+		fmt.Printf("Error: %v\n", err)
 		return err
 	}
 	entity := g.World.Entities[entityID]
