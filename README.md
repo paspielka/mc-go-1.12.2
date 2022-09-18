@@ -23,6 +23,7 @@ A golang minecraft robot package.
 - [x] Send chat message
 - [x] Receive and **parse** chat message
 - [x] Swing hands
+- [x] Attack
 
 ## Todo
 - [ ] View inventory

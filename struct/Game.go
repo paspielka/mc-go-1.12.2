@@ -368,9 +368,16 @@ func (g *Game) GetPlayer() *Player {
 	return &g.Player
 }
 func (g *Game) Attack(e *LivingEntity) {
-	g.LookAt(e.X, e.Y, e.Z)
-	//SendUseEntityPacket(g, e.ID, 1, e.Position)
+	//g.LookAt(e.X, e.Y, e.Z)
+	g.SwingHand(true)
+	SendUseEntityPacket(g, e.ID, 1, e.Position)
 }
+
+func (g *Game) Eat() {
+	// TODO: Get food slot
+	SendUseItemPacket(g, 1)
+}
+
 func (g *Game) SetPosition(v3 Vector3, onGround bool) {
 	g.GetPlayer().SetPosition(v3, onGround)
 	g.GetPlayer().X, g.GetPlayer().Y, g.GetPlayer().Z = v3.X, v3.Y, v3.Z
@@ -546,7 +553,7 @@ func SendUseEntityPacket(g *Game, TargetEntityID int32, Type int32, Pos Vector3)
 		data = append(data, PackVector3(Pos)...)
 	}
 	g.SendChan <- pk.Packet{
-		ID:   0x02,
+		ID:   0x0A,
 		Data: data,
 	}
 }
