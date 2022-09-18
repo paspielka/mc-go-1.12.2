@@ -56,14 +56,14 @@ const (
 	Particle
 	JoinGame
 	Map
-	Entity
+	EntityEvent
 	EntityRelativeMove
 	EntityLookAndRelativeMove
 	EntityLook
 	VehicleMove
 	OpenSignEditor
 	CraftRecipeResponse
-	PlayerAbilities
+	PlayerAbilitiesPacket
 	CombatEvent
 	PlayerListItem
 	PlayerPositionAndLook

@@ -1,4 +1,4 @@
-package _struct
+package data
 
 // PlayerAbilities defines what player can do.
 type PlayerAbilities struct {

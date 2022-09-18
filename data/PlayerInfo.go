@@ -1,4 +1,4 @@
-package _struct
+package data
 
 import . "github.com/edouard127/mc-go-1.12.2/maths"
 
