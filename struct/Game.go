@@ -843,7 +843,7 @@ func HandlePlayerAbilitiesPacket(g *Game, r *bytes.Reader) error {
 	if err != nil {
 		return err
 	}
-	g.Abilities.FieldofViewModifier, err = pk.UnpackFloat(r)
+	g.Abilities.FieldOfViewModifier, err = pk.UnpackFloat(r)
 	return err
 }
 
