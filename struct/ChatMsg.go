@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/edouard127/mc-go-1.12.2/locales"
-	"strings"
+	"regexp"
 )
 
 // ChatMsg is a message sent by other
@@ -34,42 +34,20 @@ func NewChatMsg(jsonMsg []byte) (jc ChatMsg, err error) {
 	return
 }
 func ExtractSenderName(msg string) string {
-	if len(msg) > 0 {
-		if msg[0] == '<' {
-			// Remove minecraft color code
-			msg = strings.Replace(msg, "§", "", 1)
-			return msg[1:strings.Index(msg, ">")]
-		}
-	}
-	return ""
+	r := regexp.MustCompile(`<.*> `)
+	s := RawString(r.FindString(msg))
+	return s[:len(s)]
 }
 func ExtractContent(msg string) (string, string) {
-	if len(msg) > 0 {
-		if msg[0] == '<' {
-			s := ExtractSenderName(msg)
-			return s, msg[len(s)+3:]
-		}
-	}
-	return "", msg
+	msg = RawString(msg)
+	sender := ExtractSenderName(msg)
+	return sender, RawString(msg[len(sender):])
 }
 
 func RawString(raw string) (s string) {
-	var escapeColors = []string{"[0m", "[30m", "[34m", "[32m", "[36m", "[31m", "[35m", "[33m", "[37m", "[90m", "[94m", "[92m", "[96m", "[91m", "[95m", "[93m", "[97m"}
-	for _, v := range escapeColors {
-		raw = strings.Replace(raw, v, "", -1)
-	}
-	// Get all index of §0
-	var index []int
-	for i := 0; i < len(raw); i++ {
-		if raw[i] == '§' {
-			index = append(index, i+1)
-		}
-	}
-	// Remove all §0
-	for i := len(index) - 1; i >= 0; i-- {
-		raw = raw[:index[i]] + raw[index[i]+2:]
-	}
-	return raw
+	r := regexp.MustCompile(`§.|\[..?m`)
+	s = r.ReplaceAllString(raw, "")
+	return s
 }
 
 var colors = map[string]int{
