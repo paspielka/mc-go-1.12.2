@@ -1,6 +1,8 @@
 package _struct
 
-import "math"
+import (
+	"math"
+)
 
 // Player includes the player's status.
 type Player struct {
@@ -34,8 +36,13 @@ func (p *Player) GetItemSlotByID(id int) Slot {
 	return Slot{}
 }
 
-func (p *Player) GetItemSlot(slot int16) Slot {
-	return p.Inventory[slot]
+func (p *Player) GetFirstStackSlot() int16 {
+	for i, item := range p.Inventory {
+		if item.Count == 64 {
+			return int16(i)
+		}
+	}
+	return -1
 }
 
 func (p *Player) GetItemAt(slot int16) Slot {
