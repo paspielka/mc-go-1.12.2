@@ -38,6 +38,7 @@ type Game struct {
 	recvChan chan *pk.Packet //be used when HandleGame
 	Events   chan Event
 	Motion   chan func() //used to submit a function and HandleGame do
+	Debug    chan string
 }
 
 // HandleGame receive server packet and response them correctly.
@@ -77,19 +78,17 @@ func (g *Game) HandleGame() error {
 		for {
 			select {
 			case err := <-errChan:
-				fmt.Printf("error: %v\n", err)
-				close(g.SendChan)
+				panic(fmt.Sprintf("error: %v\n", err))
 			case pack, ok := <-g.recvChan:
 				if !ok {
 					panic(fmt.Sprintf("packet %v is not ok", pack))
-					break
 				}
 				err := HandlePack(g, pack)
 				if err != nil {
 					panic(fmt.Errorf("handle packet 0x%X error: %v", pack, err))
 				}
 			case f := <-g.Motion:
-				fmt.Printf("recv motion\n")
+				g.Debug <- "recv motion"
 				go f()
 			}
 		}
@@ -97,7 +96,7 @@ func (g *Game) HandleGame() error {
 	return nil
 }
 func HandlePack(g *Game, p *pk.Packet) (err error) {
-	fmt.Printf("recv packet 0x%X\n", p.ID)
+	g.Debug <- fmt.Sprintf("recv packet 0x%X", p.ID)
 	reader := bytes.NewReader(p.Data)
 
 	switch p.ID {
@@ -172,7 +171,7 @@ func HandlePack(g *Game, p *pk.Packet) (err error) {
 	case 0x3C: // Entity Metadata
 		err = HandleEntityMetadata(g, reader)
 	default:
-		fmt.Printf("unhandled packet 0x%1X\n", p.ID)
+		g.Debug <- fmt.Sprintf("unhandled packet 0x%X", p.ID)
 	}
 	return nil
 }

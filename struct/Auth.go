@@ -103,6 +103,7 @@ func (p *Auth) JoinServer(addr string, port int) (g *Game, err error) {
 	g.World.Chunks = make(map[World2.ChunkLoc]*World2.Chunk)
 	g.Events = make(chan Event)
 	g.Motion = make(chan func())
+	g.Debug = make(chan string)
 	g.Server = Server{Addr: addr, Port: port}
 	World2.BuildBlockData()
 
