@@ -124,8 +124,8 @@ func HandlePack(g *Game, p *pk.Packet) (err error) {
 		err = HandlePlayerPositionAndLookPacket(g, reader)
 	case 0x54:
 		// handleDeclareRecipesPacket(g, reader)
-	case 0x27:
-		err = HandleEntityLookAndRelativeMove(g, reader)
+	/*case 0x27: // TODO: Handle error
+	err = HandleEntityLookAndRelativeMove(g, reader)*/
 	/*case 0x28:
 	HandleEntityHeadLookPacket(g, reader)*/
 	case 0x1F:
