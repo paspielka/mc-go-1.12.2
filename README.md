@@ -21,7 +21,7 @@ A golang minecraft robot package.
 - [x] Join offline server
 - [x] Parse chunk data
 - [x] Send chat message
-- [x] Recive and **parse** chat message
+- [x] Receive and **parse** chat message
 - [x] Swing hands
 
 ## Todo
