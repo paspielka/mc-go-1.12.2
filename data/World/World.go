@@ -9,7 +9,7 @@ import (
 // World record all the things in the World where player at
 type World struct {
 	Entities map[int32]*Entity
-	Chunks   map[ChunkLoc]*Chunk
+	Columns  map[ChunkPos]*Chunk
 	Time     WorldTime
 }
 
@@ -25,21 +25,11 @@ func (w *World) SetTime(t WorldTime) WorldTime {
 }
 
 func (w *World) SetBlock(v3 Vector3, b Block) {
-	c := w.Chunks[ChunkLoc{int(v3.X) >> 4, int(v3.Z) >> 4}]
-	if c != nil {
-		cx, cy, cz := int(v3.X)&15, int(v3.Y)&15, int(v3.Z)&15
-		c.Sections[int(v3.Y)/16].Blocks[cx][cy][cz] = b
-	}
+	// TODO
 }
 
 func (w *World) UpdateBlock(chunk Vector2, v3 Vector3, id int32) {
-	btype := id >> 4
-	bdata := id & 15
-	c := w.Chunks[ChunkLoc{int(chunk.X), int(chunk.Y)}]
-	if c != nil {
-		cx, cy, cz := int(v3.X)>>4&15, int(v3.Y), (int(v3.Z)&15)+int(chunk.Y*16)
-		c.Sections[int(v3.Y)/16].Blocks[cx][cy][cz] = Block{Id: uint(btype), Metadata: uint(bdata)}
-	}
+	// TODO
 }
 
 func (w *World) UpdateTime(t int64) {
@@ -102,16 +92,6 @@ func (w *World) DestroyEntity(id int32) {
 	delete(w.Entities, id)
 }
 
-// Chunk store a 256*16*16 column blocks
-type Chunk struct {
-	Sections [16]Section
-}
-
-// Section store a 16*16*16 cube blocks
-type Section struct {
-	Blocks [16][16][16]Block
-}
-
 // Block is the base of world
 type Block struct {
 	Id       uint
@@ -146,13 +126,8 @@ const (
 
 // GetBlock return the block in the position (x, y, z)
 func (w *World) GetBlock(v3 Vector3) Block {
-	c := w.Chunks[ChunkLoc{int(v3.X) >> 4, int(v3.Y) >> 4}]
-	if c != nil {
-		cx, cy, cz := int(v3.X)&15, int(v3.Y)&15, int(v3.Z)&15
-		return c.Sections[int(v3.Y)/16].Blocks[cx][cy][cz]
-	}
-
-	return Block{Id: 0}
+	// TODO
+	return Block{}
 }
 
 func (b Block) String() string {
