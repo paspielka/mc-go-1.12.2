@@ -1083,51 +1083,55 @@ func similar(a, b float64) bool {
 
 // TweenJump simulate player jump make no headway
 func (g *Game) TweenJump() {
-	p := g.GetPlayer()
-	v3 := p.GetPosition()
-	v3.Y = math.Floor(v3.Y) + 0.5
-	p.SetPosition(v3, true)
-	start := time.Now()
-	for {
-		elapsed := time.Since(start)
-		if elapsed > 500*time.Millisecond {
-			break
+	go func() {
+		p := g.GetPlayer()
+		v3 := p.GetPosition()
+		v3.Y = math.Floor(v3.Y) + 0.5
+		p.SetPosition(v3, true)
+		start := time.Now()
+		for {
+			elapsed := time.Since(start)
+			if elapsed > 500*time.Millisecond {
+				break
+			}
+			p.SetPosition(Vector3{
+				X: v3.X,
+				Y: v3.Y + 0.5*math.Sin(float64(elapsed)/float64(500*time.Millisecond)*math.Pi),
+				Z: v3.Z,
+			}, true)
+			time.Sleep(10 * time.Millisecond)
 		}
-		p.SetPosition(Vector3{
-			X: v3.X,
-			Y: v3.Y + 0.5*math.Sin(float64(elapsed)/float64(500*time.Millisecond)*math.Pi),
-			Z: v3.Z,
-		}, true)
-		time.Sleep(10 * time.Millisecond)
-	}
+	}()
 }
 
 // TweenJumpTo simulate player jump up a block
-func TweenJumpTo(g *Game, x, z int) {
-	p := g.GetPlayer()
-	v3 := p.GetPosition()
-	v3.Y = math.Floor(v3.Y) + 0.5
-	p.SetPosition(v3, true)
-	start := time.Now()
-	for {
-		elapsed := time.Since(start)
-		if elapsed > 500*time.Millisecond {
-			break
+func (g *Game) TweenJumpTo(x, z int) {
+	go func() {
+		p := g.GetPlayer()
+		v3 := p.GetPosition()
+		v3.Y = math.Floor(v3.Y) + 0.5
+		p.SetPosition(v3, true)
+		start := time.Now()
+		for {
+			elapsed := time.Since(start)
+			if elapsed > 500*time.Millisecond {
+				break
+			}
+			p.SetPosition(Vector3{
+				X: v3.X,
+				Y: v3.Y + 0.5*math.Sin(float64(elapsed)/float64(500*time.Millisecond)*math.Pi),
+				Z: v3.Z,
+			}, true)
+			SendPlayerPositionPacket(g)
+			time.Sleep(10 * time.Millisecond)
 		}
-		p.SetPosition(Vector3{
-			X: v3.X,
-			Y: v3.Y + 0.5*math.Sin(float64(elapsed)/float64(500*time.Millisecond)*math.Pi),
-			Z: v3.Z,
-		}, true)
+		v3.X, v3.Z = float64(x)+0.5, float64(z)+0.5
+		p.SetPosition(v3, true)
 		SendPlayerPositionPacket(g)
-		time.Sleep(10 * time.Millisecond)
-	}
-	v3.X, v3.Z = float64(x)+0.5, float64(z)+0.5
-	p.SetPosition(v3, true)
-	SendPlayerPositionPacket(g)
+	}()
 }
 
-func CalibratePos(g *Game) {
+func (g *Game) CalibratePos() {
 	p := g.GetPlayer()
 	v3 := p.GetBlockPos()
 	v3under := p.GetBlockPosUnder()
