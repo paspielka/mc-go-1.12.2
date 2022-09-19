@@ -623,10 +623,10 @@ func HandleChunkDataPacket(g *Game, p *pk.Packet) error {
 	if !g.Settings.ReciveMap {
 		return nil
 	}
-
-	c, x, y, err := UnpackChunkDataPacket(p, g.Info.Dimension == 0)
-	g.World.Chunks[ChunkLoc{X: x, Y: y}] = c
-	return err
+	// TODO
+	/*c, x, y, err := UnpackChunkDataPacket(p, g.Info.Dimension == 0)
+	g.World.Chunks[ChunkLoc{X: x, Y: y}] = c*/
+	return nil
 }
 
 func handleDeclareRecipesPacket(g *Game, r *bytes.Reader) {
@@ -803,8 +803,8 @@ func HandleMultiBlockChangePacket(g *Game, r *bytes.Reader) error {
 		blockID, _ := pk.UnpackVarInt(r)
 		g.World.UpdateBlock(v2, v3, blockID)
 	}
-
-	c := g.World.Chunks[ChunkLoc{X: int(cX), Y: int(cY)}]
+	// TODO
+	/*c := g.World.Chunks[ChunkLoc{X: int(cX), Y: int(cY)}]
 	if c != nil {
 		RecordCount, err := pk.UnpackVarInt(r)
 		if err != nil {
@@ -828,7 +828,7 @@ func HandleMultiBlockChangePacket(g *Game, r *bytes.Reader) error {
 
 			c.Sections[y/16].Blocks[x][y%16][z] = Block{Id: uint(BlockID)}
 		}
-	}
+	}*/
 
 	return nil
 }

@@ -12,7 +12,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/edouard127/mc-go-1.12.2/CFB8"
-	World2 "github.com/edouard127/mc-go-1.12.2/data/World"
+	. "github.com/edouard127/mc-go-1.12.2/data/World"
 	. "github.com/edouard127/mc-go-1.12.2/data/entities"
 	pk "github.com/edouard127/mc-go-1.12.2/packet"
 	"io/ioutil"
@@ -100,11 +100,11 @@ func (p *Auth) JoinServer(addr string, port int) (g *Game, err error) {
 	g.Receiver = bufio.NewReader(g.Conn)
 	g.Sender = g.Conn
 	g.World.Entities = make(map[int32]*Entity)
-	g.World.Chunks = make(map[World2.ChunkLoc]*World2.Chunk)
+	g.World.Columns = make(map[ChunkPos]*Chunk)
 	g.Events = make(chan Event)
 	g.Motion = make(chan func())
 	g.Server = Server{Addr: addr, Port: port}
-	World2.BuildBlockData()
+	BuildBlockData()
 
 	// Handshake
 	hsPacket := NewHandshakePacket(340, addr, port, 2) // Constructing handshake packets

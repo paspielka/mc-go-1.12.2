@@ -148,11 +148,11 @@ func fillSection(s *World.Section, bpb uint, DataArray []int64, palette []uint) 
 			data &= uint(DataArray[offset/64+1] << l)
 		}
 		data &= mask
-
-		if bpb < 9 {
+		// TODO: palette
+		/*if bpb < 9 {
 			s.Blocks[n%16][n/(16*16)][n%(16*16)/16].Id = palette[data]
 		} else {
 			s.Blocks[n%16][n/(16*16)][n%(16*16)/16].Id = data
-		}
+		}*/
 	}
 }
