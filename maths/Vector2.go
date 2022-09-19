@@ -1,5 +1,7 @@
 package maths
 
+import "fmt"
+
 // Vector2 is a 2D vector
 type Vector2 struct {
 	X, Y float64
@@ -35,4 +37,8 @@ func (v2 Vector2) LengthSquared() float64 {
 
 func (v2 Vector2) Normalize() Vector2 {
 	return v2.Div(Vector2{v2.Length(), v2.Length()})
+}
+
+func (v2 Vector2) String() string {
+	return fmt.Sprintf("Vector2{X: %f, Y: %f}", v2.X, v2.Y)
 }

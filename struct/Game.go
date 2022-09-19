@@ -125,8 +125,8 @@ func HandlePack(g *Game, p *pk.Packet) (err error) {
 		err = HandlePlayerPositionAndLookPacket(g, reader)
 	case 0x54:
 		// handleDeclareRecipesPacket(g, reader)
-	/*case 0x27: // TODO: Handle error
-	err = HandleEntityLookAndRelativeMove(g, reader)*/
+	case 0x27: // TODO: Handle error
+		err = HandleEntityLookAndRelativeMove(g, reader)
 	case 0x28:
 		HandleEntityLook(g, reader)
 	case 0x1F:
@@ -396,7 +396,7 @@ func (g *Game) Eat() {
 }
 
 func (g *Game) SetPosition(v3 Vector3, onGround bool) {
-	g.Player.SetPosition(v3, onGround)
+	g.GetPlayer().SetPosition(v3, onGround)
 	SendPlayerPositionPacket(g) // Update the location to the server
 }
 
@@ -416,30 +416,26 @@ func (g *Game) WalkTo(x, y, z float64) {
 }
 
 func (g *Game) WalkStraight(dist float64) {
-	g.Motion <- func() {
-		g.Player.Position.X += dist * math.Sin(g.Player.Rotation.X)
-		g.Player.Position.Z += dist * math.Cos(g.Player.Rotation.X)
-		SendPlayerPositionPacket(g) // Update the location to the server
+	for i := 0; i < int(dist); i++ {
+		g.WalkTo(1, 0, 0)
 	}
 }
 
 // LookAt method turn player's hand and make it look at a point.
 func (g *Game) LookAt(v3 Vector3) {
-	g.Motion <- func() {
-		dx := v3.X - g.Player.Position.X
-		dy := v3.Y - g.Player.Position.Y
-		dz := v3.Z - g.Player.Position.Z
-		r := math.Sqrt(dx*dx + dy*dy + dz*dz)
-		yaw := -math.Atan2(dx, dz) / math.Pi * 180
-		if yaw < 0 {
-			yaw = 360 + yaw
-		}
-		pitch := -math.Asin(dy/r) / math.Pi * 180
-		g.Player.Rotation.X, g.Player.Rotation.Y = yaw, pitch
-		g.Player.SetRotation(Vector2{X: yaw, Y: pitch}, true)
-
-		SendPlayerLookPacket(g, float32(yaw), float32(pitch), true) // Update the location to the server
+	dx := v3.X - g.Player.Position.X
+	dy := v3.Y - g.Player.Position.Y
+	dz := v3.Z - g.Player.Position.Z
+	r := math.Sqrt(dx*dx + dy*dy + dz*dz)
+	yaw := -math.Atan2(dx, dz) / math.Pi * 180
+	if yaw < 0 {
+		yaw = 360 + yaw
 	}
+	pitch := -math.Asin(dy/r) / math.Pi * 180
+	g.Player.Rotation.X, g.Player.Rotation.Y = yaw, pitch
+	g.Player.SetRotation(Vector2{X: yaw, Y: pitch}, true)
+
+	SendPlayerLookPacket(g, float32(yaw), float32(pitch), true) // Update the location to the server
 }
 
 // LookYawPitch set player's hand to the direct by yaw and pitch.
@@ -520,15 +516,13 @@ func SendPlayerPositionAndLookPacket(g *Game, v3 Vector3, v2 Vector2, onGround b
 	}
 }
 func SendPlayerLookPacket(g *Game, yaw, pitch float32, onGround bool) {
-	g.Motion <- func() {
-		var data []byte
-		data = append(data, pk.PackFloat(yaw)...)
-		data = append(data, pk.PackFloat(pitch)...)
-		data = append(data, pk.PackBoolean(onGround))
-		g.SendChan <- pk.Packet{
-			ID:   0x0F,
-			Data: data,
-		}
+	var data []byte
+	data = append(data, pk.PackFloat(yaw)...)
+	data = append(data, pk.PackFloat(pitch)...)
+	data = append(data, pk.PackBoolean(onGround))
+	g.SendChan <- pk.Packet{
+		ID:   0x0F,
+		Data: data,
 	}
 }
 
@@ -551,10 +545,11 @@ func SendTeleportConfirmPacket(g *Game, TeleportID int32) {
 }
 
 func UpdateVelocity(g *Game, entityID int32, velocity Vector3) {
-	fmt.Printf("UpdateVelocity: %v %v %v\n", velocity.X, velocity.Y, velocity.Z)
 	e := g.World.Entities[entityID]
 	if e != nil {
+		fmt.Println("UpdateVelocity", entityID, velocity)
 		e.SetPosition(e.Position.Add(velocity), true)
+		SendPlayerPositionPacket(g)
 	}
 }
 
@@ -660,7 +655,7 @@ func HandleEntityHeadLook(g *Game, reader *bytes.Reader) error {
 }
 
 func HandleEntityVelocity(g *Game, reader *bytes.Reader) error {
-	entityID, err := pk.UnpackVarInt(reader)
+	/*entityID, err := pk.UnpackVarInt(reader)
 	if err != nil {
 		return err
 	}
@@ -675,17 +670,12 @@ func HandleEntityVelocity(g *Game, reader *bytes.Reader) error {
 	velZ, err := pk.UnpackInt16(reader)
 	if err != nil {
 		return err
-	}
-	var velocity = Vector3{
-		X: float64(velX) / 8000,
-		Y: float64(velY) / 8000,
-		Z: float64(velZ) / 8000,
-	}
-	UpdateVelocity(g, entityID, velocity)
-	g.Events <- EntityVelocityEvent{
-		EntityID: entityID,
-		Velocity: velocity,
-	}
+	}*/
+	// TODO: Check if entity is player
+
+	// To update player velocity, we need to a loop and wait 1 tick each time and update the velocity both on the client and server
+	// If we don't wait for the server to send the packet to the client, the player will be teleported back to the original position or the player will rubberband
+
 	return nil
 }
 
@@ -853,6 +843,7 @@ func HandlePlayerPositionAndLookPacket(g *Game, r *bytes.Reader) error {
 	z, _ := pk.UnpackDouble(r)
 	yaw, _ := pk.UnpackFloat(r)
 	pitch, _ := pk.UnpackFloat(r)
+	_, _ = r.ReadByte()
 	TeleportID, _ := pk.UnpackVarInt(r)
 	pos := Vector3{X: x, Y: y, Z: z}
 	rot := Vector2{X: float64(yaw), Y: float64(pitch)}
@@ -1128,10 +1119,12 @@ func TweenJumpTo(g *Game, x, z int) {
 			Y: v3.Y + 0.5*math.Sin(float64(elapsed)/float64(500*time.Millisecond)*math.Pi),
 			Z: v3.Z,
 		}, true)
+		SendPlayerPositionPacket(g)
 		time.Sleep(10 * time.Millisecond)
 	}
 	v3.X, v3.Z = float64(x)+0.5, float64(z)+0.5
 	p.SetPosition(v3, true)
+	SendPlayerPositionPacket(g)
 }
 
 func CalibratePos(g *Game) {
@@ -1141,7 +1134,9 @@ func CalibratePos(g *Game) {
 	for NonSolid(g.GetBlock(v3under).String()) {
 		v3under.Y--
 		g.SetPosition(v3.Add(Vector3{X: 0.5, Y: 0.5, Z: 0.5}), true)
+		SendPlayerPositionPacket(g)
 		time.Sleep(time.Millisecond * 50)
 	}
 	g.Player.SetPosition(v3.Add(Vector3{X: 0.5, Y: 1, Z: 0.5}), true)
+	SendPlayerPositionPacket(g)
 }

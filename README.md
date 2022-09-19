@@ -27,6 +27,7 @@ A golang minecraft robot package.
 - [x] Swing hands
 - [x] Attack
 - [x] Listening sound
+- [x] Move around and look around
 
 ## Todo
 - [ ] Parse all packets
@@ -42,7 +43,6 @@ A golang minecraft robot package.
 - [ ] Unload chunks
 - [ ] Use entity
 - [ ] Use item
-- [ ] Move around and look around
 - [ ] Mine blocks
 - [ ] Place blocks
 - [ ] Path finding

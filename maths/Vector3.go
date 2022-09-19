@@ -1,5 +1,7 @@
 package maths
 
+import "fmt"
+
 // Vector3 is a 3D vector
 type Vector3 struct {
 	X, Y, Z float64
@@ -39,4 +41,8 @@ func (v3 Vector3) Normalize() Vector3 {
 
 func (v3 Vector3) ToChunkPos() Vector2 {
 	return Vector2{v3.X / 16, v3.Z / 16}
+}
+
+func (v3 Vector3) String() string {
+	return fmt.Sprintf("Vector3{X: %f, Y: %f, Z: %f}", v3.X, v3.Y, v3.Z)
 }
