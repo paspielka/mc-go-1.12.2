@@ -24,11 +24,21 @@ func (w *World) SetTime(t WorldTime) WorldTime {
 	return t
 }
 
-func (w *World) SetBlock(x, y, z int, b Block) {
-	c := w.Chunks[ChunkLoc{x >> 4, z >> 4}]
+func (w *World) SetBlock(v3 Vector3, b Block) {
+	c := w.Chunks[ChunkLoc{int(v3.X) >> 4, int(v3.Z) >> 4}]
 	if c != nil {
-		cx, cy, cz := x&15, y&15, z&15
-		c.Sections[y/16].Blocks[cx][cy][cz] = b
+		cx, cy, cz := int(v3.X)&15, int(v3.Y)&15, int(v3.Z)&15
+		c.Sections[int(v3.Y)/16].Blocks[cx][cy][cz] = b
+	}
+}
+
+func (w *World) UpdateBlock(chunk Vector2, v3 Vector3, id int32) {
+	btype := id >> 4
+	bdata := id & 15
+	c := w.Chunks[ChunkLoc{int(chunk.X), int(chunk.Y)}]
+	if c != nil {
+		cx, cy, cz := int(v3.X)>>4&15, int(v3.Y), (int(v3.Z)&15)+int(chunk.Y*16)
+		c.Sections[int(v3.Y)/16].Blocks[cx][cy][cz] = Block{Id: uint(btype), Metadata: uint(bdata)}
 	}
 }
 
@@ -104,7 +114,8 @@ type Section struct {
 
 // Block is the base of world
 type Block struct {
-	Id uint
+	Id       uint
+	Metadata uint
 }
 
 func (b Block) IsAir() bool {

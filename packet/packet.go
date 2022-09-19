@@ -176,6 +176,15 @@ func UnpackVarInt(b io.ByteReader) (int32, error) {
 	return int32(n), nil //这里要把超过int32的负数溢出
 }
 
+func UnpackAngle(b io.ByteReader) (float32, error) {
+	// 0x00 = 0 degrees, 0x80 = 90 degrees, 0x100 = 180 degrees, etc.
+	angle, err := b.ReadByte()
+	if err != nil {
+		return 0, err
+	}
+	return float32(angle) * 360 / 256, nil
+}
+
 func UnpackByte(b io.ByteReader) (byte, error) {
 	return b.ReadByte()
 }

@@ -36,3 +36,7 @@ func (v3 Vector3) LengthSquared() float64 {
 func (v3 Vector3) Normalize() Vector3 {
 	return v3.Div(Vector3{v3.Length(), v3.Length(), v3.Length()})
 }
+
+func (v3 Vector3) ToChunkPos() Vector2 {
+	return Vector2{v3.X / 16, v3.Z / 16}
+}

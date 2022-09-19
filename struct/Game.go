@@ -107,6 +107,8 @@ func HandlePack(g *Game, p *pk.Packet) (err error) {
 
 	/*case 0x18:
 	HandlePluginPacket(g, reader)*/
+	case 0x0B: // Block Change
+		err = HandleBlockChange(g, reader)
 	case 0x0D:
 		err = HandleServerDifficultyPacket(g, reader)
 	case 0x46:
@@ -125,8 +127,8 @@ func HandlePack(g *Game, p *pk.Packet) (err error) {
 		// handleDeclareRecipesPacket(g, reader)
 	/*case 0x27: // TODO: Handle error
 	err = HandleEntityLookAndRelativeMove(g, reader)*/
-	/*case 0x28:
-	HandleEntityHeadLookPacket(g, reader)*/
+	case 0x28:
+		HandleEntityLook(g, reader)
 	case 0x1F:
 		err = HandleKeepAlivePacket(g, reader)
 	case 0x26:
@@ -139,15 +141,13 @@ func HandlePack(g *Game, p *pk.Packet) (err error) {
 		err = HandleUpdateHealthPacket(g, reader)
 	case 0x0F:
 		err = HandleChatMessagePacket(g, reader)
-	case 0x0B:
-		err = HandleBlockChangePacket(g, reader)
 	case 0x10:
 		err = HandleMultiBlockChangePacket(g, reader)
 		g.Events <- BlockChangeEvent{}
 	case 0x1A:
 		err = HandleDisconnect(g, reader)
 	case 0x17:
-	// 	err = handleSetSlotPacket(g, reader)
+		err = HandleSetSlotPacket(g, reader)
 	case 0x49:
 		err = HandleSoundEffect(g, reader)
 	case 0x3E: // Entity velocity
@@ -156,10 +156,8 @@ func HandlePack(g *Game, p *pk.Packet) (err error) {
 		err = HandleTitle(g, reader)
 	case 0x36: // Entity Head Look
 		err = HandleEntityHeadLook(g, reader)
-	/*case 0x4C: // Entity Teleport
-	err = HandleEntityTeleport(g, reader)*/
-	/*case 0x1A: // Entity Status
-	err = HandleEntityStatus(g, reader)*/
+	case 0x4C: // Entity Teleport
+		err = HandleEntityTeleport(g, reader)
 	case 0x32: // Destroy Entities
 		err = HandleDestroyEntity(g, reader)
 	case 0x47: // Time update
@@ -169,6 +167,29 @@ func HandlePack(g *Game, p *pk.Packet) (err error) {
 	default:
 		fmt.Printf("unhandled packet 0x%X\n", p.ID)
 	}
+	return nil
+}
+
+func HandleEntityLook(g *Game, reader *bytes.Reader) {
+	entityID, _ := pk.UnpackVarInt(reader)
+	yaw, _ := pk.UnpackAngle(reader)
+	pitch, _ := pk.UnpackAngle(reader)
+	onGround, _ := pk.UnpackBoolean(reader)
+	rotation := Vector2{
+		X: float64(yaw),
+		Y: float64(pitch),
+	}
+
+	e := g.World.Entities[entityID]
+	if e != nil {
+		e.SetRotation(rotation, onGround)
+	}
+}
+
+func HandleBlockChange(g *Game, reader *bytes.Reader) error {
+	position, _ := pk.UnpackPosition(reader)
+	blockID, _ := pk.UnpackVarInt(reader)
+	g.World.UpdateBlock(position.ToChunkPos(), position, blockID)
 	return nil
 }
 
@@ -577,26 +598,6 @@ func SendUseItemPacket(g *Game, hand int32) {
 //								 //
 // ***************************** //
 
-func HandleBlockChangePacket(g *Game, r *bytes.Reader) error {
-	if !g.Settings.ReciveMap {
-		return nil
-	}
-	v3, err := pk.UnpackPosition(r)
-	if err != nil {
-		return err
-	}
-	c := g.World.Chunks[ChunkLoc{X: int(v3.X) >> 4, Y: int(v3.Z) >> 4}]
-	if c != nil {
-		id, err := pk.UnpackVarInt(r)
-		if err != nil {
-			return err
-		}
-		c.Sections[int(v3.Y)&15].Blocks[int(v3.X)&15][int(v3.Y)&15][int(v3.Z)&15] = Block{Id: uint(id)}
-	}
-
-	return nil
-}
-
 func HandleChatMessagePacket(g *Game, r *bytes.Reader) error {
 
 	s, err := pk.UnpackString(r)
@@ -783,14 +784,24 @@ func HandleMultiBlockChangePacket(g *Game, r *bytes.Reader) error {
 	if !g.Settings.ReciveMap {
 		return nil
 	}
-
-	cX, err := pk.UnpackInt32(r)
-	if err != nil {
-		return err
+	cX, _ := pk.UnpackInt32(r)
+	cY, _ := pk.UnpackInt32(r)
+	v2 := Vector2{
+		X: float64(cX),
+		Y: float64(cY),
 	}
-	cY, err := pk.UnpackInt32(r)
-	if err != nil {
-		return err
+	rCount, _ := pk.UnpackVarInt(r)
+	for i := 0; i < int(rCount); i++ {
+		relX, _ := r.ReadByte()
+		relY, _ := r.ReadByte()
+		relZ, _ := r.ReadByte()
+		v3 := Vector3{
+			X: float64(relX),
+			Y: float64(relY),
+			Z: float64(relZ),
+		}
+		blockID, _ := pk.UnpackVarInt(r)
+		g.World.UpdateBlock(v2, v3, blockID)
 	}
 
 	c := g.World.Chunks[ChunkLoc{X: int(cX), Y: int(cY)}]
