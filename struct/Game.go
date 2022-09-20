@@ -92,7 +92,7 @@ func (g *Game) HandleGame() error {
 	return nil
 }
 func HandlePack(g *Game, p *pk.Packet) (err error) {
-	fmt.Printf("recv packet 0x%X\n", p.ID)
+	//fmt.Printf("recv packet 0x%X\n", p.ID)
 	reader := bytes.NewReader(p.Data)
 
 	switch p.ID {
@@ -165,7 +165,7 @@ func HandlePack(g *Game, p *pk.Packet) (err error) {
 	case 0x3C: // Entity Metadata
 		err = HandleEntityMetadata(g, reader)
 	default:
-		fmt.Printf("unhandled packet 0x%X\n", p.ID)
+		//fmt.Printf("unhandled packet 0x%X\n", p.ID)
 	}
 	return nil
 }
