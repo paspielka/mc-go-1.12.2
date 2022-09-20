@@ -73,6 +73,12 @@ func (g *Game) HandleGame() error {
 			g.recvChan <- pack
 		}
 	}()
+	go func() {
+		for {
+			time.Sleep(time.Millisecond * 50)
+			g.Events <- TickEvent{}
+		}
+	}()
 	for {
 		select {
 		case err := <-errChan:
