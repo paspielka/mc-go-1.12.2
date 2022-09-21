@@ -440,8 +440,16 @@ func (g *Game) WalkStraight(dist float64) {
 
 // LookAt method turn player's hand and make it look at a point.
 func (g *Game) LookAt(v3 Vector3) {
-	rotation := GetRotationFromVector(v3)
-	g.SetRotation(rotation)
+	dx := v3.X - g.GetPlayer().Position.X
+	dy := v3.Y - g.GetPlayer().Position.Y
+	dz := v3.Z - g.GetPlayer().Position.Z
+	r := math.Sqrt(dx*dx + dy*dy + dz*dz)
+	yaw := -math.Atan2(dx, dz) / math.Pi * 180
+	if yaw < 0 {
+		yaw = 360 + yaw
+	}
+	pitch := -math.Asin(dy/r) / math.Pi * 180
+	g.SetRotation(Vector2{X: float32(yaw), Y: float32(pitch)})
 }
 
 // LookYawPitch set player's hand to the direct by yaw and pitch.
