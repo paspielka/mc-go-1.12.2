@@ -73,8 +73,8 @@ func (w *World) CreateEntity(object CreateObject) *Entity {
 			Z: object.Z,
 		},
 		Rotation: Vector2{
-			X: object.Yaw,
-			Y: object.Pitch,
+			X: float32(object.Yaw),
+			Y: float32(object.Pitch),
 		},
 		Velocity: Vector3{
 			X: object.VelX,
