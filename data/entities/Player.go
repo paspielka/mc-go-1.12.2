@@ -31,7 +31,12 @@ func (p *Player) GetBlockPos() Vector3 {
 
 // GetBlockPosUnder return the position of the Block under player's feet
 func (p *Player) GetBlockPosUnder() Vector3 {
-	return Vector3{X: math.Floor(p.Position.X), Y: math.Floor(p.Position.Y) - 1, Z: math.Floor(p.Position.Z)}
+	return p.LivingEntity.GetBlockPosUnder()
+}
+
+// ShouldSendGround return true if the player is on ground
+func (p *Player) ShouldSendGround() bool {
+	return p.LivingEntity.ShouldSendGround()
 }
 
 func (p *Player) GetItemSlotByID(id int) _struct.Slot {

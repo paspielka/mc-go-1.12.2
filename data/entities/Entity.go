@@ -33,9 +33,9 @@ func (e *Entity) EntityID() int32 {
 }
 
 func (e *Entity) SetYaw(yaw float32) {
-	e.Rotation.X = float64(yaw)
+	e.Rotation.X = yaw
 }
 
 func (e *Entity) SetPitch(pitch float32) {
-	e.Rotation.Y = float64(pitch)
+	e.Rotation.Y = pitch
 }

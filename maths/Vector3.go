@@ -40,7 +40,7 @@ func (v3 Vector3) Normalize() Vector3 {
 }
 
 func (v3 Vector3) ToChunkPos() Vector2 {
-	return Vector2{v3.X / 16, v3.Z / 16}
+	return Vector2{float32(v3.X / 16), float32(v3.Z / 16)}
 }
 
 func (v3 Vector3) String() string {
