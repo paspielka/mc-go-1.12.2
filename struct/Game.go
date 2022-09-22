@@ -341,6 +341,7 @@ func (g *Game) Dig(v3 Vector3) error {
 // PlaceBlock place a block in the position and wait
 func (g *Game) PlaceBlock(v3 Vector3, face Face) error {
 	b := g.GetBlock(v3).Id
+	g.LookAt(v3)
 	SendPlayerBlockPlacementPacket(g, v3, face, 0, 0, 0, 0)
 
 	for {
