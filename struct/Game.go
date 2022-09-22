@@ -14,6 +14,7 @@ import (
 	"math"
 	"math/rand"
 	"net"
+	"strings"
 	"time"
 )
 
@@ -634,7 +635,6 @@ func SendUseItemPacket(g *Game, hand int32) {
 // ***************************** //
 
 func HandleChatMessagePacket(g *Game, r *bytes.Reader) error {
-
 	s, err := pk.UnpackString(r)
 	if err != nil {
 		return err
@@ -649,6 +649,9 @@ func HandleChatMessagePacket(g *Game, r *bytes.Reader) error {
 	}
 	sender, content := ExtractContent(cm.String())
 	raw := fmt.Sprintf("%s%s", sender, content)
+	if strings.Contains(raw, ".gg") { // Temporary
+		return nil
+	}
 	timestamp := time.Now().UnixMilli()
 	g.Events <- ChatMessageEvent{Content: content, Sender: sender, RawString: RawString(raw), Timestamp: timestamp, Position: pos}
 	return nil
