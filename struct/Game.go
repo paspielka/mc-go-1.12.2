@@ -435,7 +435,7 @@ func (g *Game) WalkTo(x, y, z float64) {
 func (g *Game) WalkStraight(dist int) {
 	dir := g.GetPlayer().GetFacing()
 	// The walk speed is 0.2806 blocks per tick
-	path := g.GeneratePathFromDirection(dir, dist, 0.2806)
+	path := g.GeneratePathFromDirection(dir, dist, float32(0.2806))
 	go func() {
 		for {
 			select {
@@ -454,7 +454,7 @@ func (g *Game) WalkStraight(dist int) {
 	}()
 }
 
-func (g *Game) GeneratePathFromDirection(dir Direction, length int, speed int) []Vector3 {
+func (g *Game) GeneratePathFromDirection(dir Direction, length int, speed float32) []Vector3 {
 	var path []Vector3
 	for i := 0; i < length; i++ {
 		switch dir {
