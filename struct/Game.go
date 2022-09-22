@@ -14,7 +14,6 @@ import (
 	"math"
 	"math/rand"
 	"net"
-	"strings"
 	"time"
 )
 
@@ -433,6 +432,29 @@ func (g *Game) WalkTo(x, y, z float64) {
 	}
 }
 
+func (g *Game) WalkToVector(v3 Vector3) {
+	go func() {
+		dir := g.GetPlayer().GetFacing()
+		dist := g.Player.GetPosition().DistanceTo(v3)
+		// The walk speed is 0.2806 blocks per tick
+		path := GeneratePathFromDirection(dir, int(dist), float32(0.2806))
+		for {
+			select {
+			case e := <-g.Events:
+				switch e.(type) {
+				case TickEvent:
+					if len(path) == 0 {
+						return
+					}
+					// TODO: Check if the block is walkable
+					g.SetPosition(g.GetPlayer().GetPosition().Add(path[0]))
+					path = path[1:]
+				}
+			}
+		}
+	}()
+}
+
 func (g *Game) WalkStraight(dist int) {
 	go func() {
 		dir := g.GetPlayer().GetFacing()
@@ -635,6 +657,7 @@ func SendUseItemPacket(g *Game, hand int32) {
 // ***************************** //
 
 func HandleChatMessagePacket(g *Game, r *bytes.Reader) error {
+
 	s, err := pk.UnpackString(r)
 	if err != nil {
 		return err
@@ -649,9 +672,6 @@ func HandleChatMessagePacket(g *Game, r *bytes.Reader) error {
 	}
 	sender, content := ExtractContent(cm.String())
 	raw := fmt.Sprintf("%s%s", sender, content)
-	if strings.Contains(raw, ".gg") { // Temporary
-		return nil
-	}
 	timestamp := time.Now().UnixMilli()
 	g.Events <- ChatMessageEvent{Content: content, Sender: sender, RawString: RawString(raw), Timestamp: timestamp, Position: pos}
 	return nil
