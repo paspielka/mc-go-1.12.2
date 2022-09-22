@@ -1,7 +1,6 @@
 package entities
 
 import (
-	"github.com/edouard127/mc-go-1.12.2/data/World"
 	. "github.com/edouard127/mc-go-1.12.2/maths"
 	"math"
 )
@@ -51,7 +50,7 @@ func (p *LivingEntity) ShouldSendGround() bool {
 	2: North
 	3: East
 */
-func (p *LivingEntity) GetFacing() World.Direction {
+func (p *LivingEntity) GetFacing() Direction {
 	yaw := p.Rotation.X
 	switch {
 	case yaw >= 45 && yaw < 135:
