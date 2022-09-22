@@ -2,7 +2,6 @@ package entities
 
 import (
 	_struct "github.com/edouard127/mc-go-1.12.2/data"
-	"github.com/edouard127/mc-go-1.12.2/data/World"
 	. "github.com/edouard127/mc-go-1.12.2/maths"
 	"math"
 )
@@ -20,6 +19,16 @@ type Player struct {
 	FoodSaturation float32
 }
 
+type Direction byte
+
+// All four directions
+const (
+	DSouth Direction = iota
+	DWest
+	DEast
+	DNorth
+)
+
 // GetPosition return the player's position
 func (p *Player) GetPosition() Vector3 {
 	return p.Position
@@ -36,7 +45,7 @@ func (p *Player) GetBlockPosUnder() Vector3 {
 }
 
 // GetFacing return the direction the player is facing
-func (p *Player) GetFacing() World.Direction {
+func (p *Player) GetFacing() Direction {
 	return p.LivingEntity.GetFacing()
 }
 
