@@ -433,10 +433,10 @@ func (g *Game) WalkTo(x, y, z float64) {
 }
 
 func (g *Game) WalkStraight(dist int) {
-	dir := g.GetPlayer().GetFacing()
-	// The walk speed is 0.2806 blocks per tick
-	path := g.GeneratePathFromDirection(dir, dist, float32(0.2806))
 	go func() {
+		dir := g.GetPlayer().GetFacing()
+		// The walk speed is 0.2806 blocks per tick
+		path := GeneratePathFromDirection(dir, dist, float32(0.2806))
 		for {
 			select {
 			case e := <-g.Events:
@@ -446,7 +446,7 @@ func (g *Game) WalkStraight(dist int) {
 						return
 					}
 					// TODO: Check if the block is walkable
-					g.SetPosition(path[0])
+					g.SetPosition(g.GetPlayer().GetPosition().Add(path[0]))
 					path = path[1:]
 				}
 			}
@@ -454,18 +454,18 @@ func (g *Game) WalkStraight(dist int) {
 	}()
 }
 
-func (g *Game) GeneratePathFromDirection(dir Direction, length int, speed float32) []Vector3 {
+func GeneratePathFromDirection(dir Direction, length int, speed float32) []Vector3 {
 	var path []Vector3
 	for i := 0; i < length; i++ {
 		switch dir {
 		case DNorth:
-			path = append(path, g.GetPlayer().GetPosition().Add(Vector3{X: 0, Y: 0, Z: float64(speed)}))
+			path = append(path, Vector3{X: 0, Y: 0, Z: float64(-speed)})
 		case DSouth:
-			path = append(path, g.GetPlayer().GetPosition().Add(Vector3{X: 0, Y: 0, Z: -float64(speed)}))
+			path = append(path, Vector3{X: 0, Y: 0, Z: float64(speed)})
 		case DWest:
-			path = append(path, g.GetPlayer().GetPosition().Add(Vector3{X: -float64(speed), Y: 0, Z: 0}))
+			path = append(path, Vector3{X: float64(-speed), Y: 0, Z: 0})
 		case DEast:
-			path = append(path, g.GetPlayer().GetPosition().Add(Vector3{X: float64(speed), Y: 0, Z: 0}))
+			path = append(path, Vector3{X: float64(speed), Y: 0, Z: 0})
 		}
 	}
 	return path
