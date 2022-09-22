@@ -432,10 +432,43 @@ func (g *Game) WalkTo(x, y, z float64) {
 	}
 }
 
-func (g *Game) WalkStraight(dist float64) {
-	for i := 0; i < int(dist); i++ {
-		g.WalkTo(1, 0, 0)
+func (g *Game) WalkStraight(dist int) {
+	dir := g.GetPlayer().GetFacing()
+	// The walk speed is 0.2806 blocks per tick
+	path := g.GeneratePathFromDirection(dir, dist, 0.2806)
+	go func() {
+		for {
+			select {
+			case e := <-g.Events:
+				switch e.(type) {
+				case TickEvent:
+					if len(path) == 0 {
+						return
+					}
+					// TODO: Check if the block is walkable
+					g.SetPosition(path[0])
+					path = path[1:]
+				}
+			}
+		}
+	}()
+}
+
+func (g *Game) GeneratePathFromDirection(dir Direction, length int, speed int) []Vector3 {
+	var path []Vector3
+	for i := 0; i < length; i++ {
+		switch dir {
+		case DNorth:
+			path = append(path, g.GetPlayer().GetPosition().Add(Vector3{X: 0, Y: 0, Z: float64(speed)}))
+		case DSouth:
+			path = append(path, g.GetPlayer().GetPosition().Add(Vector3{X: 0, Y: 0, Z: -float64(speed)}))
+		case DWest:
+			path = append(path, g.GetPlayer().GetPosition().Add(Vector3{X: -float64(speed), Y: 0, Z: 0}))
+		case DEast:
+			path = append(path, g.GetPlayer().GetPosition().Add(Vector3{X: float64(speed), Y: 0, Z: 0}))
+		}
 	}
+	return path
 }
 
 // LookAt method turn player's hand and make it look at a point.

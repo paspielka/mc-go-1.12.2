@@ -2,6 +2,7 @@ package entities
 
 import (
 	_struct "github.com/edouard127/mc-go-1.12.2/data"
+	"github.com/edouard127/mc-go-1.12.2/data/World"
 	. "github.com/edouard127/mc-go-1.12.2/maths"
 	"math"
 )
@@ -32,6 +33,11 @@ func (p *Player) GetBlockPos() Vector3 {
 // GetBlockPosUnder return the position of the Block under player's feet
 func (p *Player) GetBlockPosUnder() Vector3 {
 	return p.LivingEntity.GetBlockPosUnder()
+}
+
+// GetFacing return the direction the player is facing
+func (p *Player) GetFacing() World.Direction {
+	return p.LivingEntity.GetFacing()
 }
 
 // ShouldSendGround return true if the player is on ground

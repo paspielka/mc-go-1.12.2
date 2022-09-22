@@ -1,6 +1,7 @@
 package entities
 
 import (
+	"github.com/edouard127/mc-go-1.12.2/data/World"
 	. "github.com/edouard127/mc-go-1.12.2/maths"
 	"math"
 )
@@ -41,4 +42,25 @@ func (p *LivingEntity) ShouldSendGround() bool {
 		return true
 	}
 	return false
+}
+
+// GetFacing return the direction the player is facing
+/*
+	0: South
+	1: West
+	2: North
+	3: East
+*/
+func (p *LivingEntity) GetFacing() World.Direction {
+	yaw := p.Rotation.X
+	switch {
+	case yaw >= 45 && yaw < 135:
+		return 1
+	case yaw >= 135 && yaw < 225:
+		return 2
+	case yaw >= 225 && yaw < 315:
+		return 3
+	default:
+		return 0
+	}
 }

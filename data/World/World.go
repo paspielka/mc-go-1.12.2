@@ -124,6 +124,16 @@ const (
 	East
 )
 
+type Direction byte
+
+// All four directions
+const (
+	DSouth Direction = iota
+	DWest
+	DEast
+	DNorth
+)
+
 // GetBlock return the block in the position (x, y, z)
 func (w *World) GetBlock(v3 Vector3) Block {
 	// TODO
