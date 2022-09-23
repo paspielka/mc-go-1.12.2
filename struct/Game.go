@@ -73,12 +73,6 @@ func (g *Game) HandleGame() error {
 			g.recvChan <- pack
 		}
 	}()
-	go func() {
-		for {
-			time.Sleep(time.Millisecond * 50)
-			g.Events <- TickEvent{}
-		}
-	}()
 	for {
 		select {
 		case err := <-errChan:
@@ -325,17 +319,13 @@ func (g *Game) Dig(v3 Vector3) error {
 	SendPlayerDiggingPacket(g, 2, v3, Top) //finish
 
 	for {
-		select {
-		case e := <-g.Events:
-			switch e.(type) {
-			case TickEvent:
-				if g.GetBlock(v3) != b {
-					break
-				}
-				g.SwingHand(true)
-			}
+		if g.GetBlock(v3) != b {
+			break
 		}
+		g.SwingHand(true)
+		time.Sleep(50 * time.Millisecond)
 	}
+	return nil
 }
 
 // PlaceBlock place a block in the position and wait
@@ -345,17 +335,13 @@ func (g *Game) PlaceBlock(v3 Vector3, face Face) error {
 	SendPlayerBlockPlacementPacket(g, v3, face, 0, 0, 0, 0)
 
 	for {
-		select {
-		case e := <-g.Events:
-			switch e.(type) {
-			case TickEvent:
-				if g.GetBlock(v3).Id != b {
-					break
-				}
-				g.SwingHand(true)
-			}
+		if g.GetBlock(v3).Id != b {
+			break
 		}
+		g.SwingHand(true)
+		time.Sleep(50 * time.Millisecond)
 	}
+	return nil
 }
 
 // Chat send chat message to server
@@ -379,11 +365,7 @@ func (g *Game) Chat(msg string) error {
 // GetBlock return the block at (x, y, z)
 func (g *Game) GetBlock(v3 Vector3) Block {
 	bc := make(chan Block)
-
-	g.Motion <- func() {
-		bc <- g.World.GetBlock(v3)
-	}
-
+	bc <- g.World.GetBlock(v3)
 	return <-bc
 }
 
@@ -441,19 +423,14 @@ func (g *Game) WalkToVector(v3 Vector3) {
 		path := GeneratePathFromDirection(dir, int(dist), float32(0.2806))
 		initPos := g.GetPlayer().GetPosition()
 		for {
-			select {
-			case e := <-g.Events:
-				switch e.(type) {
-				case TickEvent:
-					if len(path) == 0 {
-						return
-					}
-					// TODO: Check if the block is walkable
-					initPos = initPos.Add(path[0])
-					g.SetPosition(initPos)
-					path = path[1:]
-				}
+			if len(path) == 0 {
+				return
 			}
+			// TODO: Check if the block is walkable
+			initPos = initPos.Add(path[0])
+			g.SetPosition(initPos)
+			path = path[1:]
+			time.Sleep(50 * time.Millisecond)
 		}
 	}()
 }
@@ -464,18 +441,13 @@ func (g *Game) WalkStraight(dist int) {
 		// The walk speed is 0.2806 blocks per tick
 		path := GeneratePathFromDirection(dir, dist, float32(0.2806))
 		for {
-			select {
-			case e := <-g.Events:
-				switch e.(type) {
-				case TickEvent:
-					if len(path) == 0 {
-						return
-					}
-					// TODO: Check if the block is walkable
-					g.SetPosition(g.GetPlayer().GetPosition().Add(path[0]))
-					path = path[1:]
-				}
+			if len(path) == 0 {
+				return
 			}
+			// TODO: Check if the block is walkable
+			g.SetPosition(g.GetPlayer().GetPosition().Add(path[0]))
+			path = path[1:]
+			time.Sleep(50 * time.Millisecond)
 		}
 	}()
 }
@@ -1111,7 +1083,7 @@ func TweenLook(g *Game, yaw, pitch float32, t time.Duration) {
 			X: yaw0 + (yaw-yaw0)*float32(elapsed)/float32(t),
 			Y: pitch0 + (pitch-pitch0)*float32(elapsed)/float32(t),
 		})
-		time.Sleep(10 * time.Millisecond)
+		time.Sleep(50 * time.Millisecond)
 	}
 }
 
@@ -1138,7 +1110,7 @@ func TweenLineMove(g *Game, x, z float64) error {
 			Y: v3.Y,
 			Z: v3.Z + ofstZ*float64(elapsed)/float64(t),
 		})
-		time.Sleep(10 * time.Millisecond)
+		time.Sleep(50 * time.Millisecond)
 	}
 	return nil
 }
@@ -1165,7 +1137,7 @@ func (g *Game) TweenJump() {
 				Y: v3.Y + 0.5*math.Sin(float64(elapsed)/float64(500*time.Millisecond)*math.Pi),
 				Z: v3.Z,
 			})
-			time.Sleep(10 * time.Millisecond)
+			time.Sleep(50 * time.Millisecond)
 		}
 	}()
 }
