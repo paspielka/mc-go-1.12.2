@@ -439,6 +439,7 @@ func (g *Game) WalkToVector(v3 Vector3) {
 		dist := g.Player.GetPosition().DistanceTo(v3)
 		// The walk speed is 0.2806 blocks per tick
 		path := GeneratePathFromDirection(dir, int(dist), float32(0.2806))
+		initPos := g.GetPlayer().GetPosition()
 		for {
 			select {
 			case e := <-g.Events:
@@ -448,7 +449,8 @@ func (g *Game) WalkToVector(v3 Vector3) {
 						return
 					}
 					// TODO: Check if the block is walkable
-					g.SetPosition(g.GetPlayer().GetPosition().Add(path[0]))
+					initPos = initPos.Add(path[0])
+					g.SetPosition(initPos)
 					path = path[1:]
 				}
 			}
