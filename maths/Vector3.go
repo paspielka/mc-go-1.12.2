@@ -1,6 +1,9 @@
 package maths
 
-import "fmt"
+import (
+	"fmt"
+	"math"
+)
 
 // Vector3 is a 3D vector
 type Vector3 struct {
@@ -24,7 +27,10 @@ func (v3 Vector3) Div(v Vector3) Vector3 {
 }
 
 func (v3 Vector3) DistanceTo(v Vector3) float64 {
-	return v3.Sub(v).Length()
+	xDiff := v.X + 0.5 - v3.X
+	yDiff := v.Y + 0.5 - v3.Y
+	zDiff := v.Z + 0.5 - v3.Z
+	return math.Sqrt(xDiff*xDiff + yDiff*yDiff + zDiff*zDiff)
 }
 
 func (v3 Vector3) Length() float64 {
