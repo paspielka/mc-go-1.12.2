@@ -93,9 +93,15 @@ func (p *Auth) JoinServer(addr string, port int) (g *Game, err error) {
 			break
 		}
 	}
-	if len(ras) == 0 {
-		err = fmt.Errorf("cannot find a server to connect")
-		return
+	// Fallback If SRV record not found
+	if ras == "" {
+		e := p.PingServer(addr, port)
+		if e == nil {
+			ras = fmt.Sprintf("%s:%d", addr, port)
+		} else {
+			err = fmt.Errorf("cannot connect the server %q: %v", addr, e)
+			return
+		}
 	}
 
 	// Connection
