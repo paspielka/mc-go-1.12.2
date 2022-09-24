@@ -53,13 +53,15 @@ func (p *LivingEntity) ShouldSendGround() bool {
 func (p *LivingEntity) GetFacing() Direction {
 	yaw := p.Rotation.X
 	switch {
-	case yaw >= 0 && yaw < 90:
+	case yaw >= -45 && yaw < 45:
 		return DSouth
-	case yaw > 90 && yaw < 180:
+	case yaw >= 45 && yaw < 135:
 		return DWest
-	case yaw < 180 && yaw > -90:
+	case yaw >= 135 && yaw > -135:
+		return DNorth
+	case yaw >= -135 && yaw < -45:
 		return DEast
 	default:
-		return DNorth
+		return DSouth
 	}
 }
