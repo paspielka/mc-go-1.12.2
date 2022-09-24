@@ -87,9 +87,20 @@ func (p *Auth) PingServer(addr string, port int, wg *sync.WaitGroup) (err error)
 // Return a JSON string about server status.
 // see JSON format at https://wiki.vg/Server_List_Ping#Response
 func (p *Auth) JoinServer(addr string, port int) (g *Game, err error) {
+	var ras string
+
+	_, records, _ := net.LookupSRV("minecraft", "tcp", addr)
+	for _, srv := range records {
+		e := p.PingServer(srv.Target, int(srv.Port), &sync.WaitGroup{})
+		if e == nil {
+			ras = fmt.Sprintf("%s:%d", srv.Target, srv.Port)
+			break
+		}
+	}
+
 	// Connection
 	g = new(Game)
-	g.Conn, err = net.Dial("tcp", fmt.Sprintf("%s:%d", addr, port))
+	g.Conn, err = net.Dial("tcp", ras)
 	if err != nil {
 		err = fmt.Errorf("cannot connect the server %q: %v", addr, err)
 		return
