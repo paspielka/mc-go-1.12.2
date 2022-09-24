@@ -330,17 +330,9 @@ func (g *Game) Dig(v3 Vector3) error {
 
 // PlaceBlock place a block in the position and wait
 func (g *Game) PlaceBlock(v3 Vector3, face Face) error {
-	b := g.GetBlock(v3).Id
-	g.LookAt(v3)
+	g.SwingHand(true)
 	SendPlayerBlockPlacementPacket(g, v3, face, 0, 0, 0, 0)
 
-	for {
-		if g.GetBlock(v3).Id != b {
-			break
-		}
-		g.SwingHand(true)
-		time.Sleep(50 * time.Millisecond)
-	}
 	return nil
 }
 
@@ -364,9 +356,7 @@ func (g *Game) Chat(msg string) error {
 
 // GetBlock return the block at (x, y, z)
 func (g *Game) GetBlock(v3 Vector3) Block {
-	bc := make(chan Block)
-	bc <- g.World.GetBlock(v3)
-	return <-bc
+	return g.World.GetBlock(v3)
 }
 
 // GetPlayer return the player
@@ -528,14 +518,14 @@ func SendKeepAlivePacket(g *Game, KeepAliveID int64) {
 	}
 }
 
-func SendPlayerBlockPlacementPacket(g *Game, v3 Vector3, face Face, i int, i2 int, i3 int, i4 int) {
+func SendPlayerBlockPlacementPacket(g *Game, v3 Vector3, face Face, i int, i2, i3, i4 float32) {
 	var data []byte
 	data = append(data, pk.PackPosition(v3)...)
 	data = append(data, pk.PackVarInt(int32(face))...)
 	data = append(data, pk.PackVarInt(int32(i))...)
-	data = append(data, pk.PackVarInt(int32(i2))...)
-	data = append(data, pk.PackVarInt(int32(i3))...)
-	data = append(data, pk.PackVarInt(int32(i4))...)
+	data = append(data, pk.PackFloat(i2)...)
+	data = append(data, pk.PackFloat(i3)...)
+	data = append(data, pk.PackFloat(i4)...)
 	g.SendChan <- pk.Packet{
 		ID:   0x1F,
 		Data: data,

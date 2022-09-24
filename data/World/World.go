@@ -130,6 +130,12 @@ func (w *World) GetBlock(v3 Vector3) Block {
 	return Block{}
 }
 
+// RayTrace return the block that the ray hit
+func (w *World) RayTrace(v3 Vector3, v2 Vector2, maxDistance float64) (Block, Vector3, Face) {
+	// TODO
+	return Block{}, Vector3{}, Bottom
+}
+
 func (b Block) String() string {
 	return BlockNameByID[b.Id]
 }
