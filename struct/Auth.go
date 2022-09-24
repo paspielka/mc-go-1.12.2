@@ -19,7 +19,6 @@ import (
 	"net"
 	"net/http"
 	"strings"
-	"sync"
 )
 
 // Auth includes a account
@@ -29,11 +28,8 @@ type Auth struct {
 	AsTk string
 }
 
-func (p *Auth) PingServer(addr string, port int, wg *sync.WaitGroup) (err error) {
+func (p *Auth) PingServer(addr string, port int) (err error) {
 
-	defer func() {
-		wg.Done()
-	}()
 	// Connection
 	g := new(Game)
 	g.Conn, err = net.Dial("tcp", fmt.Sprintf("%s:%d", addr, port))
@@ -91,11 +87,15 @@ func (p *Auth) JoinServer(addr string, port int) (g *Game, err error) {
 
 	_, records, _ := net.LookupSRV("minecraft", "tcp", addr)
 	for _, srv := range records {
-		e := p.PingServer(srv.Target, int(srv.Port), &sync.WaitGroup{})
+		e := p.PingServer(srv.Target, int(srv.Port))
 		if e == nil {
 			ras = fmt.Sprintf("%s:%d", srv.Target, srv.Port)
 			break
 		}
+	}
+	if len(ras) == 0 {
+		err = fmt.Errorf("cannot find a server to connect")
+		return
 	}
 
 	// Connection
