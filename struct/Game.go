@@ -1112,23 +1112,21 @@ func similar(a, b float64) bool {
 // TweenJump simulate player jump make no headway
 func (g *Game) TweenJump() {
 	go func() {
-		p := g.GetPlayer()
-		v3 := p.GetPosition()
-		v3.Y = math.Floor(v3.Y) + 0.5
-		p.SetPosition(v3)
+		v3 := g.GetPlayer().GetPosition()
 		start := time.Now()
 		for {
 			elapsed := time.Since(start)
 			if elapsed > 500*time.Millisecond {
 				break
 			}
-			p.SetPosition(Vector3{
+			g.SetPosition(Vector3{
 				X: v3.X,
-				Y: v3.Y + 0.5*math.Sin(float64(elapsed)/float64(500*time.Millisecond)*math.Pi),
+				Y: v3.Y + 1.25*math.Sin(float64(elapsed)/float64(500*time.Millisecond)*math.Pi),
 				Z: v3.Z,
 			})
 			time.Sleep(50 * time.Millisecond)
 		}
+		g.SetPosition(v3)
 	}()
 }
 
